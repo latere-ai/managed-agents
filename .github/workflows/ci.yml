@@ -1,0 +1,80 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  vet:
+    name: go vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - run: go vet ./...
+      - run: go -C internal/gen vet ./...
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      # Built here rather than pulled as a prebuilt binary: golangci-lint embeds
+      # the Go toolchain it was compiled with, and one built against an older Go
+      # refuses a `go 1.27` go.mod outright.
+      - run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+      - run: golangci-lint run --timeout 5m ./...
+
+  test:
+    name: test (race)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - run: go test -race -timeout 120s ./...
+      - run: go -C internal/gen test -race -timeout 120s ./...
+
+  generate:
+    name: generated types match the schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      # The schema is the source of truth, so a schema edit that was never
+      # regenerated must fail here rather than leave Go and JSON disagreeing
+      # about the contract with each looking authoritative on its own.
+      - run: go generate ./...
+      - run: git diff --exit-code -- types.gen.go
+
+  dependencies:
+    name: standard library only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      # The port's one promise to a consumer is that adopting it costs nothing
+      # in their module graph. go.sum existing at the root would already mean
+      # that promise had been broken.
+      - run: test ! -f go.sum
+      - run: go test -run TestModuleDependsOnNothing ./...
