@@ -6,4 +6,4 @@ They are not the user documentation. A person building an application on the por
 
 | Spec | Status | What it settles |
 |---|---|---|
-| [001](001-the-managed-agent-port.md) — The managed-agent port | designed | What the port covers and refuses to cover, the three vendor shapes it is measured against, the rules a schema cannot carry, and the schema-first pipeline. |
+| [001](001-the-managed-agent-port.md) — The managed-agent port | built | What the port covers and refuses to cover, the three vendor shapes it is measured against, the rules a schema cannot carry, and the schema-first pipeline. |

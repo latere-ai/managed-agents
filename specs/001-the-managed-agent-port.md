@@ -1,6 +1,6 @@
 # 001 — The managed-agent port
 
-**Status:** designed.
+**Status:** built. See *Outcome*.
 
 **Scope:** one provider-neutral contract for running a graded, sandboxed, tool-using session; the rules an adapter must obey; the conformance suite that proves it obeys them; a reference runtime; and the JSON Schema the contract is generated from. Adapters for named vendors are out of scope and live in their own repositories.
 
@@ -172,6 +172,8 @@ Four things a general-purpose generator cannot infer, declared as `x-` keywords:
 
 | Keyword | On | Effect |
 |---|---|---|
+| `x-type-order` | root | The order to emit `$defs` in. A JSON object has no order, and `jsonschema-go` does not record document order when it unmarshals, so without this the output is alphabetical and scatters related types. |
+| `x-field-order` | object | The same for an object's properties, for the same reason. |
 | `x-go-name` | property, `$def` | Overrides the derived Go identifier. `id` becomes `ID`, `sha256` becomes `SHA256`, `url` becomes `URL`. |
 | `x-go-type` | property | Emits a named Go type instead of the structural one. `locator` becomes `json.RawMessage`; a raw payload is stored and returned, never parsed. |
 | `x-go-key-type` | object with `additionalProperties` | Types a map's key. `extra` becomes `map[Meter]int64`, not `map[string]int64`. Paired with `propertyNames` in the schema so the constraint is language-neutral too. |
@@ -218,3 +220,31 @@ Continuous integration needs the same, through a token with read access to the r
 - **Streaming.** `Events` is pull-after-the-fact. A runtime that pushes events buffers them. Live streaming to a caller is a later addition and would be a new optional interface, not a change to this one.
 - **The poll loop.** Stated above and repeated because it is the tempting one.
 - **Cost.** `Usage` reports quantities. Turning quantities into money needs a rate card, which is a different concern with a different release cadence.
+
+## Outcome
+
+Built over three commits: the design, the port with its tests, and the schema-first pipeline. `go test -race ./...` passes, coverage across the module is **90.4%**, and the root module has no `go.sum` because it has nothing to depend on.
+
+### What measuring the vendors changed
+
+The fit table was written from the real surfaces, not from memory, and it moved the design once. Two of the three shapes turned out to be **in-process blocking drivers**, not remote sessions: one exposes a synchronous call returning a result, with events pushed to an observer during the run and no identifier at all; the other drives the model loop on the caller's goroutine against a hosted sandbox, with continuation done by serialising session state to the caller's own storage. Only one of the three has a session you can poll from another process.
+
+That is the shape `SessionRef` was originally written for, and its documentation promised durability unconditionally. `Capabilities.Resumable` is the correction, and the conformance suite now holds a runtime to whichever way it declares. The rest of the table needed no change: `Evaluation`, `Artifacts`, `Cancellation`, and `DurableEvents` already expressed the other differences, which is the capability model working as intended.
+
+`WorkerRef.Revision` was raised as a possible misfit and turned out not to exist in this contract at all — it belonged to an older, worker-centric surface that this one had already replaced.
+
+### What the schema-first pipeline cost
+
+Three things were not as planned:
+
+- **The library does not generate code.** `jsonschema-go` parses, marshals, resolves, and validates; its own documentation describes it as usable *for* code generation rather than as a generator. `internal/gen` is therefore ours, at about 350 lines. This is the right trade anyway: it is what made the `x-` keyword set exactly what the contract needs rather than what a general-purpose tool happens to support.
+- **Property order does not survive a round trip.** `Schema.PropertyOrder` is populated by inference from a Go type, not by unmarshalling a document, and `Properties` is a map. Field and type order had to become explicit keywords. `Schema.Extra` does preserve unknown keywords, which is what makes the whole annotation approach work.
+- **`Capabilities` became a wire type.** It had no JSON tags, because nothing had ever serialised it. Generating it gave it tags, and that is a small improvement: a non-Go adapter needs the capability declaration as much as it needs the specification.
+
+The order of work held. The types were written by hand first, the tests were made green against them, and only then was the schema written to reproduce them — so the generated structs could be diffed against a known-good target. They matched field for field and tag for tag, which is the only reason the swap was a non-event.
+
+### Deliberately not done
+
+- **A `Controller`.** The poll loop stays in the applications. `docs/using-the-port.md` shows one, as documentation rather than as API.
+- **Streaming.** `Events` is pull-after-the-fact and a pushing runtime buffers. A live stream would be a new optional interface, not a change to this one.
+- **The `latere-ai/ci` token.** The `GOPRIVATE` steps are documented in the README and `CONTRIBUTING.md`, but the shared pipeline has not been given a read token yet. This blocks the first consumer, not this repository.
