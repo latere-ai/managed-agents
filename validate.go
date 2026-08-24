@@ -25,6 +25,11 @@ var (
 	preferencePattern = regexp.MustCompile(`^(best|balanced|fast)$`)
 	packagePart       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+\-]*$`)
 	envNamePattern    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+	// runtimeNamePattern is the same expression the schema states for
+	// RuntimeName. Canonical form alone was a weaker test — "my runtime" is
+	// its own lower-cased, trimmed self — so Go accepted names the wire
+	// contract rejects, and the two are supposed to be one contract.
+	runtimeNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 )
 
 func invalid(field, message string) error { return &InvalidSpecError{Field: field, Message: message} }
@@ -216,8 +221,8 @@ func safeRelativePath(value string) error {
 // travels through storage and logs untouched, so a credential inside it is
 // refused at this boundary rather than later.
 func (r SessionRef) Validate(maxBytes int) error {
-	if CanonicalRuntimeName(string(r.Runtime)) == "" || r.Runtime != CanonicalRuntimeName(string(r.Runtime)) {
-		return invalid("ref.runtime", "must be canonical and non-empty")
+	if r.Runtime != CanonicalRuntimeName(string(r.Runtime)) || !runtimeNamePattern.MatchString(string(r.Runtime)) {
+		return invalid("ref.runtime", "must be a canonical lower-case name")
 	}
 	if strings.TrimSpace(r.ID) == "" {
 		return invalid("ref.id", "must not be empty")

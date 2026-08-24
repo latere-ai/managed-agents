@@ -18,6 +18,7 @@ package contracttest
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -72,8 +73,75 @@ func (s Suite) Run(t *testing.T) {
 		if err := runtime.Release(context.Background(), ref); err != nil {
 			t.Fatalf("repeated Release: %v", err)
 		}
-		if _, err := runtime.Events(context.Background(), ref); !errors.Is(err, managed.ErrNotFound) {
-			t.Fatalf("Events after release = %v", err)
+		for name, read := range map[string]func() error{
+			"Events":        func() error { _, err := runtime.Events(context.Background(), ref); return err },
+			"ListArtifacts": func() error { _, err := runtime.ListArtifacts(context.Background(), ref); return err },
+			"FetchArtifact": func() error {
+				_, err := runtime.FetchArtifact(context.Background(), ref, managed.Artifact{ID: "any", Path: "any"})
+				return err
+			},
+		} {
+			if err := read(); !errors.Is(err, managed.ErrNotFound) {
+				t.Errorf("%s after release = %v, want ErrNotFound", name, err)
+			}
+		}
+	})
+
+	t.Run("artifacts are listed and fetchable", func(t *testing.T) {
+		runtime := s.New()
+		if !supports(t, runtime).Artifacts {
+			t.Skip("runtime does not enumerate artifacts")
+		}
+		ref := start(t, runtime, spec(false))
+		pollTerminal(t, runtime, ref, managed.GradingNotRequested)
+		artifacts, err := runtime.ListArtifacts(context.Background(), ref)
+		if err != nil {
+			t.Fatalf("ListArtifacts: %v", err)
+		}
+		// An adapter is free to produce nothing. What it may not do is list a
+		// file it then cannot hand over, or hand over a path it never listed:
+		// the list is the caller's only way to name what to fetch.
+		seen := make(map[string]bool, len(artifacts))
+		for _, artifact := range artifacts {
+			if artifact.Path == "" {
+				t.Errorf("artifact %+v has no path", artifact)
+			}
+			if seen[artifact.Path] {
+				t.Errorf("artifact path %q listed twice", artifact.Path)
+			}
+			seen[artifact.Path] = true
+			if _, err := runtime.FetchArtifact(context.Background(), ref, artifact); err != nil {
+				t.Errorf("FetchArtifact(%+v): %v", artifact, err)
+			}
+		}
+		unlisted := managed.Artifact{ID: "not-listed", Path: "not/listed"}
+		if _, err := runtime.FetchArtifact(context.Background(), ref, unlisted); !errors.Is(err, managed.ErrNotFound) {
+			t.Errorf("FetchArtifact of an unlisted file = %v, want ErrNotFound", err)
+		}
+	})
+
+	t.Run("artifacts are refused when unsupported", func(t *testing.T) {
+		runtime := s.New()
+		if supports(t, runtime).Artifacts {
+			t.Skip("runtime enumerates artifacts")
+		}
+		ref := start(t, runtime, spec(false))
+		pollTerminal(t, runtime, ref, managed.GradingNotRequested)
+		// Refusing is the contract. An empty list would read as "the session
+		// produced nothing", which is a different and wrong answer.
+		if _, err := runtime.ListArtifacts(context.Background(), ref); !errors.Is(err, managed.ErrUnsupported) {
+			t.Fatalf("ListArtifacts = %v, want ErrUnsupported", err)
+		}
+	})
+
+	t.Run("cancel is refused when unsupported", func(t *testing.T) {
+		runtime := s.New()
+		if supports(t, runtime).Cancellation {
+			t.Skip("runtime can cancel")
+		}
+		ref := start(t, runtime, spec(false))
+		if err := runtime.Cancel(context.Background(), ref); !errors.Is(err, managed.ErrUnsupported) {
+			t.Fatalf("Cancel = %v, want ErrUnsupported", err)
 		}
 	})
 
@@ -126,8 +194,20 @@ func (s Suite) Run(t *testing.T) {
 		runtime := s.New()
 		ref := start(t, runtime, spec(false))
 		resumable := supports(t, runtime).Resumable
+		// Through the persisted form, not the value still in hand. The claim
+		// Resumable makes is about a reference that went to storage and came
+		// back, so a locator that does not survive a round trip — or a lost
+		// LocatorVersion — is exactly what this case is looking for.
+		encoded, err := json.Marshal(ref)
+		if err != nil {
+			t.Fatalf("marshal ref: %v", err)
+		}
+		var restored managed.SessionRef
+		if err := json.Unmarshal(encoded, &restored); err != nil {
+			t.Fatalf("unmarshal ref: %v", err)
+		}
 		restarted := s.Restart(runtime)
-		_, err := restarted.Poll(context.Background(), ref)
+		_, err = restarted.Poll(context.Background(), restored)
 		switch {
 		case resumable && err != nil:
 			t.Fatalf("Resumable runtime lost the session across a restart: %v", err)

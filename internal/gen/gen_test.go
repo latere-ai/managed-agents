@@ -111,6 +111,11 @@ func TestSchemaRejectsWhatTheContractForbids(t *testing.T) {
 		{"model with no id", "ModelRef", `{"provider":"reference"}`},
 		{"revision below one", "SessionRef", `{"runtime":"reference","id":"s","revision":0,"locator_version":1}`},
 		{"non-canonical runtime name", "SessionRef", `{"runtime":"Reference","id":"s","revision":1,"locator_version":1}`},
+		// The Go half rejects this too. A name that is its own lower-cased,
+		// trimmed self used to pass there while failing here, which is the kind
+		// of disagreement "one contract, two forms" is supposed to make
+		// impossible.
+		{"runtime name with a space", "SessionRef", `{"runtime":"my runtime","id":"s","revision":1,"locator_version":1}`},
 		{"sha256 that is not a digest", "AttachmentResource", `{"path":"a","content":"","sha256":"nope"}`},
 		{"negative token bucket", "Usage", `{"model":{"provider":"p","id":"i"},"input_fresh":-1,"input_cached":0,"cache_write":0,"cache_write_5m":0,"cache_write_1h":0,"output":0}`},
 		{"evaluation with no revisions", "EvaluationSpec", `{"rubric":"r","max_revisions":0}`},

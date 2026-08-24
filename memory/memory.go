@@ -66,6 +66,18 @@ type Config struct {
 	// how a test drives the in-process shape — an embeddable runtime whose
 	// sessions cannot outlive the process that started them.
 	NonResumable bool
+	// NoArtifacts makes this runtime declare Capabilities.Artifacts false and
+	// refuse both artifact calls. Returning an empty list instead would read as
+	// "the session produced nothing", which is the confusion the flag exists to
+	// prevent.
+	NoArtifacts bool
+	// NoCancellation makes this runtime declare Capabilities.Cancellation false
+	// and refuse Cancel, rather than accepting it and carrying on.
+	NoCancellation bool
+	// NoEvaluation makes this runtime declare Capabilities.Evaluation false, so
+	// a graded specification is refused by Validate. It needs no other change:
+	// a session that cannot start cannot reach a verdict.
+	NoEvaluation bool
 }
 
 // Store holds the sessions. It lives outside Runtime on purpose: that is what
@@ -156,10 +168,10 @@ func (r *Runtime) capabilities() managed.Capabilities {
 		PackageManagers:    map[string]bool{"pip": true},
 		NetworkModes:       map[managed.NetworkMode]bool{managed.NetworkNone: true, managed.NetworkOpen: true},
 		RepositoryModes:    map[managed.AccessMode]bool{managed.AccessReadOnly: true, managed.AccessReadWrite: true},
-		Evaluation:         true,
+		Evaluation:         !r.config.NoEvaluation,
 		DurableEvents:      true,
-		Artifacts:          true,
-		Cancellation:       true,
+		Artifacts:          !r.config.NoArtifacts,
+		Cancellation:       !r.config.NoCancellation,
 		Resumable:          !r.config.NonResumable,
 		MaxAttachmentBytes: 64 << 20,
 		MaxLocatorBytes:    managed.DefaultMaxLocatorBytes,
@@ -280,6 +292,9 @@ func (r *Runtime) ListArtifacts(ctx context.Context, ref managed.SessionRef) ([]
 	if err := r.before(ctx, FailList, ref); err != nil {
 		return nil, err
 	}
+	if r.config.NoArtifacts {
+		return nil, &managed.UnsupportedError{Runtime: Name, Field: "artifacts", Capability: "artifacts"}
+	}
 	paths := slices.Sorted(maps.Keys(r.config.Files))
 	artifacts := make([]managed.Artifact, 0, len(paths))
 	for index, filePath := range paths {
@@ -311,6 +326,9 @@ func (r *Runtime) FetchArtifact(ctx context.Context, ref managed.SessionRef, art
 func (r *Runtime) Cancel(ctx context.Context, ref managed.SessionRef) error {
 	if err := r.before(ctx, FailCancel, ref); err != nil {
 		return err
+	}
+	if r.config.NoCancellation {
+		return &managed.UnsupportedError{Runtime: Name, Field: "cancellation", Capability: "cancellation"}
 	}
 	r.store.mu.Lock()
 	defer r.store.mu.Unlock()

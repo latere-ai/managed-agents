@@ -15,20 +15,24 @@ import (
 // process restart looks like to a backend that keeps its sessions somewhere
 // outside the Runtime value.
 func TestRuntimeContract(t *testing.T) {
-	store := NewStore()
+	files := map[string][]byte{"outputs/answer.md": []byte("the answer"), "outputs/log.txt": []byte("...")}
 	contracttest.Suite{
-		New: func() managed.Runtime { return NewWithStore(store, Config{}) },
+		// A fresh Store per case: the suite promises no state leaks between
+		// them, and sharing one here would make the first case that enumerates
+		// sessions fail on the order the cases happen to run in.
+		New: func() managed.Runtime { return NewWithStore(nil, Config{Files: files}) },
 		Restart: func(previous managed.Runtime) managed.Runtime {
-			return NewWithStore(previous.(*Runtime).store, Config{})
+			return NewWithStore(previous.(*Runtime).store, Config{Files: files})
 		},
 	}.Run(t)
 }
 
 // TestNonResumableRuntimeContract runs the same suite against a runtime that
-// declares it cannot survive a restart. Both declarations have to pass the
-// suite, or the capability is a comment rather than a contract.
+// declares away four capabilities: it cannot survive a restart, enumerate
+// artifacts, cancel, or grade. Every capability has to pass the
+// suite in both declarations, or the flag is a comment rather than a contract.
 func TestNonResumableRuntimeContract(t *testing.T) {
-	config := Config{NonResumable: true}
+	config := Config{NonResumable: true, NoArtifacts: true, NoCancellation: true, NoEvaluation: true}
 	contracttest.Suite{
 		New: func() managed.Runtime { return NewWithStore(nil, config) },
 		Restart: func(managed.Runtime) managed.Runtime {

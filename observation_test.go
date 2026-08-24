@@ -157,3 +157,26 @@ func TestValidateObservationAllowsACheckpoint(t *testing.T) {
 		t.Fatalf("checkpoint rejected: %v", err)
 	}
 }
+
+// TestSessionRefRuntimeNameMatchesTheSchema keeps the Go and JSON halves of the
+// contract agreeing about what a runtime may be called. Canonical form alone
+// was the weaker test: a name with a space is its own lower-cased, trimmed
+// self, so Go used to accept names the schema's pattern rejects.
+func TestSessionRefRuntimeNameMatchesTheSchema(t *testing.T) {
+	accepted := []RuntimeName{"reference", "anthropic-managed", "vendor.eu", "r2d2", "under_score"}
+	refused := []RuntimeName{"", "Reference", "my runtime", " reference", "-leading", "trailing "}
+	for _, name := range accepted {
+		ref := testRef()
+		ref.Runtime = name
+		if err := ref.Validate(0); err != nil {
+			t.Errorf("Validate rejected %q: %v", name, err)
+		}
+	}
+	for _, name := range refused {
+		ref := testRef()
+		ref.Runtime = name
+		if err := ref.Validate(0); !errors.Is(err, ErrInvalidSpec) {
+			t.Errorf("Validate accepted %q (err = %v)", name, err)
+		}
+	}
+}
