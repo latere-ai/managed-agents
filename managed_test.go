@@ -153,7 +153,7 @@ func TestValidateCapabilities(t *testing.T) {
 	}{
 		{"manager", func(s *SessionSpec) { s.Sandbox.Packages[0].Manager = "conda" }},
 		{"network", func(s *SessionSpec) { s.Sandbox.Network = NetworkPolicy{Mode: NetworkOpen} }},
-		{"evaluation", func(s *SessionSpec) { capabilities.Evaluation = false }},
+		{"evaluation", func(*SessionSpec) { capabilities.Evaluation = false }},
 		{"attachment size", func(s *SessionSpec) {
 			s.Resources[0].Attachment.Content = []byte("much too large")
 			sum := sha256.Sum256(s.Resources[0].Attachment.Content)
