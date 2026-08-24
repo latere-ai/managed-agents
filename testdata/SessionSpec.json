@@ -1,0 +1,58 @@
+{
+  "model": {
+    "preference": "best"
+  },
+  "instructions": "You are a careful worker.",
+  "task": "Write the answer to the output directory.",
+  "sandbox": {
+    "packages": [
+      {
+        "manager": "pip",
+        "name": "numpy",
+        "version": "2.1.0"
+      }
+    ],
+    "bootstrap": [
+      [
+        "python",
+        "-m",
+        "compileall",
+        "."
+      ]
+    ],
+    "network": {
+      "mode": "allowlist",
+      "allowed_domains": [
+        "files.example.org"
+      ],
+      "secret_refs": {
+        "FILES_TOKEN": "files.example.org:token"
+      }
+    }
+  },
+  "resources": [
+    {
+      "kind": "attachment",
+      "attachment": {
+        "path": "inputs/data.csv",
+        "media_type": "text/csv",
+        "content": "Y29sX2EsY29sX2IKMSwyCg==",
+        "sha256": "e6ce3c136b36cc2f73c9a1d1f0030e99d86eff0e28fe51ca0f0ba3059d94396e"
+      }
+    },
+    {
+      "kind": "repository",
+      "repository": {
+        "url": "https://example.org/org/repo.git",
+        "revision": "main",
+        "destination": "work",
+        "access": "rw",
+        "credential_ref": "forge:write"
+      }
+    }
+  ],
+  "evaluation": {
+    "rubric": "The answer is correct.",
+    "max_revisions": 3
+  }
+}

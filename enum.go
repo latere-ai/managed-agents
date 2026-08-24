@@ -1,5 +1,12 @@
 package managed
 
+// The two ordered enums are hand-written rather than generated. State and Grade
+// are string values on the wire, but in Go they carry an order — a lifecycle
+// that only moves forwards, and a judgement that is either decided or not — and
+// the marshalling below is what keeps the wire form independent of the numbering
+// the order needs. Every other enum in the contract is a plain string type and
+// is generated from the schema.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -122,89 +129,3 @@ func (g *Grade) UnmarshalJSON(raw []byte) error {
 	}
 	return fmt.Errorf("unknown managed grade %q", name)
 }
-
-// NetworkMode is the outbound network policy a sandbox runs under. The empty
-// value is not a mode: validation reads an omitted mode as NetworkNone, so a
-// spec that forgets to say gets the closed sandbox rather than the open one.
-type NetworkMode string
-
-// The outbound network policies. NetworkNone closes the sandbox off and
-// NetworkOpen lifts every restriction; neither may carry domains or secrets.
-// NetworkAllowlist is the only mode that may carry secrets, and each one is
-// bound to a domain the allowlist names.
-const (
-	NetworkNone      NetworkMode = "none"
-	NetworkAllowlist NetworkMode = "allowlist"
-	NetworkOpen      NetworkMode = "open"
-)
-
-// AccessMode is how a session may use a mounted repository. Runtimes advertise
-// the modes they honour in Capabilities, so a spec asking for more than the
-// runtime allows is refused before the session starts.
-type AccessMode string
-
-// The repository access modes. AccessReadWrite also obliges the spec to name a
-// credential reference, since a mount the session can push to needs one.
-const (
-	AccessReadOnly  AccessMode = "ro"
-	AccessReadWrite AccessMode = "rw"
-)
-
-// ResourceKind says which payload of a Resource is the live one. Exactly one
-// payload pointer may be set and it must be the one the kind names; validation
-// rejects the mismatch rather than guessing.
-type ResourceKind string
-
-// The resource kinds. ResourceAttachment carries file content inline with a
-// SHA-256 the validator recomputes; ResourceRepository names an HTTPS
-// repository to place at a destination inside the workspace.
-const (
-	ResourceAttachment ResourceKind = "attachment"
-	ResourceRepository ResourceKind = "repository"
-)
-
-// TerminalReason says why a session stopped, and is carried only on a terminal
-// Status. StateFailed alone cannot tell a run the runtime broke on from one
-// that was cancelled or timed out, and operators chase those in different
-// places.
-type TerminalReason string
-
-// Why a session stopped. ReasonSucceeded and ReasonEvaluationFailed are
-// outcomes of the work itself; ReasonCancelled, ReasonTimedOut and
-// ReasonRuntimeFailed are an account of a run that never reached
-// a verdict. ReasonPolicyRefused is for a session a runtime declined on policy
-// grounds rather than ran, without the work ever starting.
-const (
-	ReasonSucceeded        TerminalReason = "succeeded"
-	ReasonEvaluationFailed TerminalReason = "evaluation_failed"
-	ReasonCancelled        TerminalReason = "cancelled"
-	ReasonTimedOut         TerminalReason = "timed_out"
-	ReasonRuntimeFailed    TerminalReason = "runtime_failed"
-	ReasonPolicyRefused    TerminalReason = "policy_refused"
-)
-
-// Role is who a transcript event is attributed to. The set is closed: an
-// adapter maps every runtime-native speaker onto one of these.
-type Role string
-
-// The event roles: the model, the caller it answers, and the harness around
-// them both.
-const (
-	RoleAgent  Role = "agent"
-	RoleUser   Role = "user"
-	RoleSystem Role = "system"
-)
-
-// EventKind is what a transcript event is. Unlike Role the set is deliberately
-// open: the kinds below are named so callers compare against a constant rather
-// than a bare string, while a runtime-native kind passes through unchanged
-// rather than being dropped or coerced.
-type EventKind string
-
-// The well-known event kinds. Others pass through as the runtime names them.
-const (
-	KindMessage    EventKind = "message"
-	KindThinking   EventKind = "thinking"
-	KindToolUse    EventKind = "tool_use"
-	KindToolResult EventKind = "tool_result"
-)

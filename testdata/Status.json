@@ -1,0 +1,39 @@
+{
+  "ref": {
+    "runtime": "reference",
+    "id": "session-1",
+    "revision": 2,
+    "locator_version": 1
+  },
+  "model": {
+    "provider": "reference",
+    "id": "model-1",
+    "billing_variant": "priority"
+  },
+  "state": "done",
+  "started_at": "2026-08-24T09:00:00Z",
+  "finished_at": "2026-08-24T09:12:30Z",
+  "usage": {
+    "model": {
+      "provider": "reference",
+      "id": "model-1"
+    },
+    "input_fresh": 1200,
+    "input_cached": 90000,
+    "cache_write": 0,
+    "cache_write_5m": 4000,
+    "cache_write_1h": 0,
+    "output": 3100,
+    "extra": {
+      "container_seconds": 750
+    },
+    "details": {
+      "reasoning": 900
+    }
+  },
+  "terminal_reason": "succeeded",
+  "verdict": {
+    "grade": "passed",
+    "explanation": "The answer matches the rubric."
+  }
+}

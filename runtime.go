@@ -2,62 +2,6 @@ package managed
 
 import "context"
 
-// Capabilities is what a runtime can actually do, stated as semantic flags and
-// limits rather than vendor product names. It exists so a specification is
-// refused before anything remote is created: there is no best-effort mode in
-// which an unsupported package manager, network mode, or oversized attachment
-// is silently dropped.
-type Capabilities struct {
-	// OutputDir is the sandbox path a session is told to write its artifacts
-	// to. A caller templates it into the instructions rather than hard-coding
-	// one backend's filesystem layout.
-	OutputDir string
-	// PackageManagers are the managers this runtime can install from, keyed by
-	// the name a Package carries.
-	PackageManagers map[string]bool
-	// NetworkModes are the egress policies this runtime can impose. A mode
-	// absent here is refused, never downgraded to a stricter one that happens
-	// to be supported.
-	NetworkModes map[NetworkMode]bool
-	// RepositoryModes are the repository access modes this runtime can arrange.
-	RepositoryModes map[AccessMode]bool
-	// Evaluation reports whether this runtime can grade a session against a
-	// rubric. When false, a specification carrying an EvaluationSpec is
-	// refused: grading is not something a caller can bolt on afterwards from a
-	// transcript.
-	Evaluation bool
-	// DurableEvents reports whether the transcript is stored by the runtime
-	// rather than buffered in this process. When false the evidence dies with
-	// the process, so a caller that wants to keep it must read it before
-	// letting the process end.
-	DurableEvents bool
-	// Artifacts reports whether the runtime can enumerate the files a session
-	// produced. When false, ListArtifacts refuses rather than returning an
-	// empty list, which would read as "the session produced nothing".
-	Artifacts bool
-	// Cancellation reports whether a running session can be stopped. When
-	// false, Cancel refuses and a caller's only lever is to stop reading.
-	Cancellation bool
-	// Resumable reports whether a SessionRef survives the process that created
-	// it. When true, a reference persisted now can be handed back to a fresh
-	// process later and will still name a live session. When false the
-	// reference is meaningful only inside the process that started the session:
-	// an adapter over an in-process runtime declares false, and a caller that
-	// must survive a restart refuses the runtime at admission rather than
-	// discovering the loss when a restart happens.
-	//
-	// This is separate from DurableEvents on purpose. That flag is about the
-	// evidence outliving the process; this one is about the handle doing so. A
-	// runtime can lose one and keep the other.
-	Resumable bool
-	// MaxAttachmentBytes bounds one attachment's content. Zero means the
-	// runtime declares no bound.
-	MaxAttachmentBytes int64
-	// MaxLocatorBytes bounds the locator this runtime writes into a reference.
-	// Zero means DefaultMaxLocatorBytes.
-	MaxLocatorBytes int
-}
-
 // Runtime is one backend able to execute a session. The interface is
 // deliberately small enough to fake, because every adapter is held to the same
 // conformance suite.

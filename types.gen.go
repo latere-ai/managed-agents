@@ -1,3 +1,5 @@
+// Code generated from managed.json. DO NOT EDIT.
+
 package managed
 
 import (
@@ -10,6 +12,129 @@ import (
 // uses. Every durable reference carries one, so the name must be canonical for
 // a persisted session to route back to the adapter that started it.
 type RuntimeName string
+
+// Meter names a billable quantity that is not a token bucket, such as a
+// container second or a hosted tool call. The set is open because each runtime
+// emits its own, but a meter must be priced before a session using it can
+// settle.
+type Meter string
+
+// NetworkMode is the outbound network policy a sandbox runs under. The empty
+// value is not a mode: validation reads an omitted mode as none, so a
+// specification that forgets to say gets the closed sandbox rather than the
+// open one.
+type NetworkMode string
+
+const (
+	// NetworkNone closes the sandbox off. It may carry neither domains nor
+	// secrets.
+	NetworkNone NetworkMode = "none"
+
+	// NetworkAllowlist permits the named domains and nothing else. It is the only
+	// mode that may carry secrets, and each one is bound to a domain the allowlist
+	// names.
+	NetworkAllowlist NetworkMode = "allowlist"
+
+	// NetworkOpen lifts every restriction. It may carry neither domains nor
+	// host-bound secrets, because there is no host binding left to enforce.
+	NetworkOpen NetworkMode = "open"
+)
+
+// AccessMode is how a session may use a mounted repository. Runtimes advertise
+// the modes they honour in Capabilities, so a specification asking for more
+// than the runtime allows is refused before the session starts.
+type AccessMode string
+
+const (
+	// AccessReadOnly states that the session must not write to the repository. The
+	// enforcement is the credential's own scope; the mode tells the runtime what
+	// to arrange.
+	AccessReadOnly AccessMode = "ro"
+
+	// AccessReadWrite obliges the specification to name a credential reference,
+	// since a mount the session can push to needs one.
+	AccessReadWrite AccessMode = "rw"
+)
+
+// ResourceKind says which payload of a Resource is the live one. Exactly one
+// payload may be set and it must be the one the kind names; validation rejects
+// the mismatch rather than guessing.
+type ResourceKind string
+
+const (
+	// ResourceAttachment carries file content inline with a SHA-256 the validator
+	// recomputes.
+	ResourceAttachment ResourceKind = "attachment"
+
+	// ResourceRepository names an HTTPS repository to place at a destination
+	// inside the workspace.
+	ResourceRepository ResourceKind = "repository"
+)
+
+// TerminalReason says why a session stopped, and is carried only on a terminal
+// Status. A failed state alone cannot tell a run the runtime broke on from one
+// that was cancelled or timed out, and operators chase those in different
+// places.
+type TerminalReason string
+
+const (
+	// ReasonSucceeded is the work finishing on its own terms.
+	ReasonSucceeded TerminalReason = "succeeded"
+
+	// ReasonEvaluationFailed is the work finishing and the evaluator deciding
+	// against it.
+	ReasonEvaluationFailed TerminalReason = "evaluation_failed"
+
+	// ReasonCancelled is a session stopped from outside.
+	ReasonCancelled TerminalReason = "cancelled"
+
+	// ReasonTimedOut is a session that stopped answering rather than one that
+	// failed. The distinction is the point: a fault the runtime owned up to and a
+	// runtime that went quiet are chased in different places.
+	ReasonTimedOut TerminalReason = "timed_out"
+
+	// ReasonRuntimeFailed is a fault the runtime reported.
+	ReasonRuntimeFailed TerminalReason = "runtime_failed"
+
+	// ReasonPolicyRefused is a session a runtime declined on policy grounds rather
+	// than ran, without the work ever starting.
+	ReasonPolicyRefused TerminalReason = "policy_refused"
+)
+
+// Role is who a transcript event is attributed to. The set is closed: an
+// adapter maps every runtime-native speaker onto one of these.
+type Role string
+
+const (
+	// RoleAgent is the model.
+	RoleAgent Role = "agent"
+
+	// RoleUser is the caller the model answers.
+	RoleUser Role = "user"
+
+	// RoleSystem is the harness around them both.
+	RoleSystem Role = "system"
+)
+
+// EventKind is what a transcript event is. Unlike Role the set is deliberately
+// open: the kinds below are named so callers compare against a constant rather
+// than a bare string, while a runtime-native kind passes through unchanged
+// rather than being dropped or coerced into a neighbour.
+type EventKind string
+
+const (
+	// KindMessage is text from one of the roles.
+	KindMessage EventKind = "message"
+
+	// KindThinking is reasoning the model exposed.
+	KindThinking EventKind = "thinking"
+
+	// KindToolUse is the model calling a tool.
+	KindToolUse EventKind = "tool_use"
+
+	// KindToolResult is what the tool answered.
+	KindToolResult EventKind = "tool_result"
+)
 
 // ModelRef is the exact, provider-qualified model a session ran on, and the key
 // a rate card is resolved against. Provider is the inference and cost source
@@ -78,10 +203,9 @@ type SandboxSpec struct {
 // verified against Content during validation, so a corrupted or substituted
 // payload fails the specification instead of the run.
 //
-// Keeping attachments outside every repository destination is structural
-// rather than stylistic: it is what makes "this data is not ours to
-// redistribute" enforceable by the filesystem layout, not by the model's good
-// behaviour.
+// Keeping attachments outside every repository destination is structural rather
+// than stylistic: it is what makes "this data is not ours to redistribute"
+// enforceable by the filesystem layout, not by the model's good behaviour.
 type AttachmentResource struct {
 	Path      string `json:"path"`
 	MediaType string `json:"media_type,omitempty"`
@@ -117,10 +241,10 @@ type Resource struct {
 	Repository *RepositoryResource `json:"repository,omitempty"`
 }
 
-// EvaluationSpec makes a session graded. A nil *EvaluationSpec on SessionSpec
-// is the only way to say "ungraded", which is why a present one must carry a
-// non-empty rubric and a positive revision budget: a zero value must not be
-// readable as grading against nothing.
+// EvaluationSpec makes a session graded. An absent EvaluationSpec on
+// SessionSpec is the only way to say "ungraded", which is why a present one
+// must carry a non-empty rubric and a positive revision budget: a zero value
+// must not be readable as grading against nothing.
 type EvaluationSpec struct {
 	Rubric       string `json:"rubric"`
 	MaxRevisions int    `json:"max_revisions"`
@@ -146,7 +270,7 @@ type SessionSpec struct {
 // persisted with compare-and-swap.
 //
 // How long the handle stays meaningful is the runtime's to declare, not this
-// package's to promise. A runtime reporting Capabilities.Resumable may be
+// contract's to promise. A runtime reporting Capabilities.Resumable may be
 // handed a reference reconstructed in a later process and will still find the
 // session; one reporting false will not, and the reference is good only inside
 // the process that started the session. A caller that must survive a restart
@@ -172,12 +296,6 @@ type Verdict struct {
 	Explanation string `json:"explanation,omitempty"`
 }
 
-// Meter names a billable quantity that is not a token bucket, such as a
-// container second or a hosted tool call. The set is open because each runtime
-// emits its own, but a meter must be priced before a session using it can
-// settle.
-type Meter string
-
 // Usage is the cumulative, provider-neutral cost of a session so far. The six
 // token buckets are mutually exclusive so each is priced exactly once; Extra
 // holds billable non-token meters, and Details holds non-billable decomposition
@@ -190,15 +308,32 @@ type Meter string
 // would be billed several times over; ValidateObservation refuses a total that
 // decreased for exactly that reason.
 type Usage struct {
-	Model        ModelRef         `json:"model"`
-	InputFresh   int64            `json:"input_fresh"`
-	InputCached  int64            `json:"input_cached"`
-	CacheWrite   int64            `json:"cache_write"`
-	CacheWrite5m int64            `json:"cache_write_5m"`
-	CacheWrite1h int64            `json:"cache_write_1h"`
-	Output       int64            `json:"output"`
-	Extra        map[Meter]int64  `json:"extra,omitempty"`
-	Details      map[string]int64 `json:"details,omitempty"`
+	Model ModelRef `json:"model"`
+	// InputFresh is prompt tokens the provider processed from scratch.
+	InputFresh int64 `json:"input_fresh"`
+	// InputCached is prompt tokens served from the provider's cache rather than
+	// processed fresh. It is priced far below InputFresh, which is why it is a
+	// bucket of its own rather than folded into it.
+	InputCached int64 `json:"input_cached"`
+	// CacheWrite is cache-write tokens whose bought lifetime the runtime did not
+	// report. It is kept separate from the two known lifetimes so that "we do not
+	// know which" stays visible rather than being guessed into a cheaper bucket.
+	CacheWrite int64 `json:"cache_write"`
+	// CacheWrite5m is cache-write tokens that bought the shorter cache lifetime.
+	CacheWrite5m int64 `json:"cache_write_5m"`
+	// CacheWrite1h is cache-write tokens that bought the longer cache lifetime. It
+	// costs more than the shorter one, so folding the two together loses money in
+	// one direction and overcharges in the other.
+	CacheWrite1h int64 `json:"cache_write_1h"`
+	// Output is tokens the model produced.
+	Output int64 `json:"output"`
+	// Extra holds billable non-token meters, such as a container second or a
+	// hosted tool call.
+	Extra map[Meter]int64 `json:"extra,omitempty"`
+	// Details holds non-billable decomposition of the buckets above, such as
+	// reasoning tokens already counted in Output. Pricing never iterates it, so a
+	// new entry here can never change a bill.
+	Details map[string]int64 `json:"details,omitempty"`
 }
 
 // Status is one observation of a session: where it has got to, what it has cost
@@ -223,7 +358,7 @@ type Status struct {
 // is stable, so re-reading the transcript neither duplicates entries nor
 // changes what an existing one means. Raw keeps the runtime's own payload
 // intact, because the transcript is the evidence for a run and must not be
-// reduced to this package's vocabulary.
+// reduced to this contract's vocabulary.
 type Event struct {
 	ID      string          `json:"id"`
 	Role    Role            `json:"role"`
@@ -242,4 +377,59 @@ type Event struct {
 type Artifact struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`
+}
+
+// Capabilities is what a runtime can actually do, stated as semantic flags and
+// limits rather than vendor product names. It exists so a specification is
+// refused before anything remote is created: there is no best-effort mode in
+// which an unsupported package manager, network mode, or oversized attachment
+// is silently dropped.
+type Capabilities struct {
+	// OutputDir is the sandbox path a session is told to write its artifacts to. A
+	// caller templates it into the instructions rather than hard-coding one
+	// backend's filesystem layout.
+	OutputDir string `json:"output_dir,omitempty"`
+	// PackageManagers are the managers this runtime can install from, keyed by the
+	// name a Package carries.
+	PackageManagers map[string]bool `json:"package_managers,omitempty"`
+	// NetworkModes are the egress policies this runtime can impose. A mode absent
+	// here is refused, never downgraded to a stricter one that happens to be
+	// supported.
+	NetworkModes map[NetworkMode]bool `json:"network_modes,omitempty"`
+	// RepositoryModes are the repository access modes this runtime can arrange.
+	RepositoryModes map[AccessMode]bool `json:"repository_modes,omitempty"`
+	// Evaluation reports whether this runtime can grade a session against a
+	// rubric. When false, a specification carrying an EvaluationSpec is refused:
+	// grading is not something a caller can bolt on afterwards from a transcript.
+	Evaluation bool `json:"evaluation,omitempty"`
+	// DurableEvents reports whether the transcript is stored by the runtime rather
+	// than buffered in this process. When false the evidence dies with the
+	// process, so a caller that wants to keep it must read it before letting the
+	// process end.
+	DurableEvents bool `json:"durable_events,omitempty"`
+	// Artifacts reports whether the runtime can enumerate the files a session
+	// produced. When false, ListArtifacts refuses rather than returning an empty
+	// list, which would read as "the session produced nothing".
+	Artifacts bool `json:"artifacts,omitempty"`
+	// Cancellation reports whether a running session can be stopped. When false,
+	// Cancel refuses and a caller's only lever is to stop reading.
+	Cancellation bool `json:"cancellation,omitempty"`
+	// Resumable reports whether a SessionRef survives the process that created it.
+	// When true, a reference persisted now can be handed back to a fresh process
+	// later and will still name a live session. When false the reference is
+	// meaningful only inside the process that started the session: an adapter over
+	// an in-process runtime declares false, and a caller that must survive a
+	// restart refuses the runtime at admission rather than discovering the loss
+	// when a restart happens.
+	//
+	// This is separate from DurableEvents on purpose. That flag is about the
+	// evidence outliving the process; this one is about the handle doing so. A
+	// runtime can lose one and keep the other.
+	Resumable bool `json:"resumable,omitempty"`
+	// MaxAttachmentBytes bounds one attachment's content. Zero means the runtime
+	// declares no bound.
+	MaxAttachmentBytes int64 `json:"max_attachment_bytes,omitempty"`
+	// MaxLocatorBytes bounds the locator this runtime writes into a reference.
+	// Zero means DefaultMaxLocatorBytes.
+	MaxLocatorBytes int `json:"max_locator_bytes,omitempty"`
 }

@@ -1,0 +1,11 @@
+{
+  "ref": {
+    "provider": "reference",
+    "id": "model-1"
+  },
+  "preferences": [
+    "best",
+    "balanced",
+    "fast"
+  ]
+}

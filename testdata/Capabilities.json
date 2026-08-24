@@ -1,0 +1,21 @@
+{
+  "output_dir": "/workspace/outputs/",
+  "package_managers": {
+    "pip": true
+  },
+  "network_modes": {
+    "none": true,
+    "allowlist": true
+  },
+  "repository_modes": {
+    "ro": true,
+    "rw": true
+  },
+  "evaluation": true,
+  "durable_events": true,
+  "artifacts": true,
+  "cancellation": true,
+  "resumable": true,
+  "max_attachment_bytes": 67108864,
+  "max_locator_bytes": 65536
+}

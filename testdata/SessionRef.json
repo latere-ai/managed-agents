@@ -1,0 +1,9 @@
+{
+  "runtime": "reference",
+  "id": "session-1",
+  "revision": 2,
+  "locator_version": 1,
+  "locator": {
+    "shard": "a"
+  }
+}

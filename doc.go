@@ -49,3 +49,5 @@
 // runtime declares — before anything remote is created. There is no
 // best-effort mode in which an unsupported request is quietly dropped.
 package managed
+
+//go:generate go -C internal/gen run . -schema ../../schema/managed.json -out ../../types.gen.go
