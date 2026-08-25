@@ -194,7 +194,7 @@ func run(ctx context.Context, rt managed.Runtime, spec managed.SessionSpec, save
 }
 ```
 
-Three details are load-bearing:
+Three details decide whether a session survives:
 
 - **Persist the reference before the first poll.** A session that started remotely and is invisible locally is the worst outcome available: it costs money and nobody can reach it.
 - **Persist a raised revision before calling the runtime again.** A revision moving up is the runtime checkpointing itself. Skip the save and a crash leaves you holding a stale handle.
