@@ -44,3 +44,16 @@ modernize:
   # lateregate checks each name still exists, because `go fix` rejects an
   # unknown -name=false and the gate would then pass silently.
   disable: [newexpr, errorsastype]
+
+spec:
+  # Every spec is numbered, appears in the index with the status it claims, and
+  # every wikilink resolves. The status lived in prose before this gate, which
+  # meant the index and the document could disagree with nobody noticing.
+  dir: specs
+  index: specs/README.md
+  numbered: true
+  wikilinks: true
+  require: [title, status]
+  # This tree's own word for a settled spec. The vocabulary is closed so a
+  # typo becomes a failure rather than a new state nobody defined.
+  status: [built]

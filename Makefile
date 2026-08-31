@@ -71,6 +71,11 @@ lint-modernize:
 lint-config:
 	@$(LATEREGATE) golangci $(GATE_ROOT)
 
+# The spec tree describes itself consistently: every spec numbered, indexed,
+# and every wikilink resolving.
+spec-lint:
+	@$(LATEREGATE) spec-lint $(GATE_ROOT)
+
 # Runs the linter the CI lint job runs, against the config lint-config renders.
 # The version is pinned rather than `latest`, so a run cannot pick up a build
 # published after this file was reviewed, and `go run` fetches it, so the gate

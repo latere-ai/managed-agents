@@ -1,6 +1,11 @@
+---
+title: The managed-agent port
+status: built
+---
+
 # 001 — The managed-agent port
 
-**Status:** built. See *Outcome*.
+The outcome this spec reached is recorded in *Outcome* below.
 
 **Scope:** one provider-neutral contract for running a graded, sandboxed, tool-using session; the rules an adapter must obey; the conformance suite that proves it obeys them; a reference runtime; and the JSON Schema the contract is generated from. Adapters for named vendors are out of scope and live in their own repositories.
 
