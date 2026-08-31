@@ -1,3 +1,8 @@
 coverage.out
 *.test
 internal/gen/gen
+
+# Rendered by `make lint-config` from the shared template in
+# latere.ai/x/ci-gate, never committed. A committed copy makes drift from the
+# shared configuration detectable; regenerating makes it impossible.
+.golangci.yml

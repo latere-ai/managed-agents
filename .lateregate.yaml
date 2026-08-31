@@ -1,0 +1,46 @@
+# The per-push gate configuration for the managed-agent port. Every check runs
+# from latere.ai/x/ci-gate, pinned in internal/gate/go.mod, so each one runs the
+# same on a laptop as it does on a runner.
+#
+# The tool is pinned in a nested module rather than here at the root, because
+# the port promises that adopting it costs nothing in a consumer's module
+# graph. internal/gate/go.mod says why; the Makefile reaches the tool through
+# it and points it back at this directory.
+
+cover:
+  # Ninety, per package rather than as a repository average: an average lets a
+  # well-tested package carry an untested one and reports a number nobody can
+  # act on. CONTRIBUTING states the same figure, and until now nothing checked
+  # it.
+  threshold: 90.0
+  trim_prefix: latere.ai/x/managed-agents/
+  exempt:
+    # One entry, and the value is the reason; lateregate rejects an empty one.
+    #
+    # contracttest is the suite an adapter runs, not code this module runs. The
+    # statements it does not reach are the convenience Run wrapper, which the
+    # reference runtime does not call because it configures a Suite, and the
+    # failure reports that fire only against an adapter that breaks a rule.
+    # Covering those needs a deliberately non-conforming runtime, and this
+    # module ships none. The exemption records that gap rather than hiding it.
+    contracttest: >-
+      the conformance suite's own failure paths, reachable only from an adapter
+      that breaks a rule; the reference runtime conforms, so nothing here
+      drives them
+
+hermetic:
+  # Nothing besides the toolchain. The suite reaches no system binary: the one
+  # test that shells out runs `go list`, which the toolchain provides, and the
+  # empty list is what keeps that true.
+  allow: []
+
+modernize:
+  # newexpr rewrites pointer helpers to new(v) and inlines call sites unevenly,
+  # leaving the helper with no callers and an untyped constant argument at the
+  # wrong default type. errorsastype rewrites errors.As to errors.AsType[T],
+  # whose type parameter is constrained to [E error], which a local non-error
+  # interface target does not satisfy, so the rewrite does not compile.
+  #
+  # lateregate checks each name still exists, because `go fix` rejects an
+  # unknown -name=false and the gate would then pass silently.
+  disable: [newexpr, errorsastype]

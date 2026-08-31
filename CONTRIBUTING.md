@@ -27,7 +27,7 @@ docs/                    user-facing documentation
 
 The exceptions are `State` and `Grade`. They are strings on the wire but *ordered* in Go — a lifecycle that only moves forwards, and a judgement that is either decided or not — and the hand-written marshalling is what keeps the wire form independent of the numbering that order needs. Everything else is a plain string type and is generated.
 
-**2. The module depends on nothing.** No import outside the standard library, in the package or its tests. `TestModuleDependsOnNothing` enforces it. This is the port's one promise to a third party: adopting the contract costs them nothing in their module graph. That is also why the generator is its own module — a tool requirement in the root `go.mod` would reach every consumer for a program none of them run.
+**2. The module depends on nothing.** No import outside the standard library, in the package or its tests. `TestModuleDependsOnNothing` enforces it. This is the port's one promise to a third party: adopting the contract costs them nothing in their module graph. That is also why the generator and the CI gates are each their own module — a tool requirement in the root `go.mod` would reach every consumer for a program none of them run. `make deps` checks both halves: that no root `go.sum` exists at all, and that the packages a consumer builds import nothing outside the standard library.
 
 **3. Policy stays out.** The port states what an adapter must do. How long to wait between polls, how many failures to tolerate, when to give up, whether a failed evidence handoff blocks release — those are an application's choices. When you are unsure which side of the line something falls on, ask: *does this constrain an adapter, or a caller?*
 
@@ -50,12 +50,16 @@ A new flag needs a `contracttest` case that holds a runtime to *both* declaratio
 ## Testing
 
 ```
-go test -race ./...                       # the port
-go -C internal/gen test ./...             # the generator and the schema
-go test -coverpkg=./... -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
+make test         # go vet and the suite, the fast signal
+make test-race    # the port and the generator under the race detector
+make cover        # the coverage gate, judged per package
+make all          # every gate, which is exactly what CI runs
 ```
 
-Coverage is above 90% and should stay there. The reference runtime and the conformance suite are not scaffolding — they are how the contract is checked, so they carry tests of their own.
+CI runs no command of its own. It probes this Makefile and runs the targets it
+finds, so a gate that passes here passes there for the same reason.
+
+Coverage is above 90% and `make cover` holds it there, per package rather than as a repository average, against the floor and the one exemption in `.lateregate.yaml`. The reference runtime and the conformance suite are not scaffolding — they are how the contract is checked, so they carry tests of their own.
 
 `memory.Config` scripts the reference runtime: how long a session runs, what grade it reaches, which files it produces, which call fails. Use it rather than writing a new fake.
 
