@@ -312,7 +312,7 @@ func goName(jsonName string, schema *jsonschema.Schema) string {
 		}
 	}
 	var out strings.Builder
-	for _, word := range strings.Split(jsonName, "_") {
+	for word := range strings.SplitSeq(jsonName, "_") {
 		if word == "" {
 			continue
 		}
@@ -335,7 +335,7 @@ func docComment(text, indent string) string {
 			out.WriteString(indent + "//\n")
 		}
 		line := ""
-		for _, word := range strings.Fields(paragraph) {
+		for word := range strings.FieldsSeq(paragraph) {
 			switch {
 			case line == "":
 				line = word

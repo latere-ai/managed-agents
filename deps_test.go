@@ -16,7 +16,7 @@ func TestModuleDependsOnNothing(t *testing.T) {
 	if err != nil {
 		t.Skipf("go list unavailable: %v", err)
 	}
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if strings.HasPrefix(line, "latere.ai/x/managed-agents") {
 			continue
 		}
