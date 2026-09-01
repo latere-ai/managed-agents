@@ -56,4 +56,9 @@ spec:
   require: [title, status]
   # This tree's own word for a settled spec. The vocabulary is closed so a
   # typo becomes a failure rather than a new state nobody defined.
-  status: [built]
+  status: [built, archived]
+  # `archived` is the terminal status. `built` is not: a shipped spec is the
+  # live record of what the surface does and belongs where a reader looks.
+  archive:
+    dir: .archive
+    statuses: [archived]
