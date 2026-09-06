@@ -90,3 +90,27 @@ Continuous integration needs the same, through a token with read access. Without
 ## Commits
 
 One logical change per commit, staged explicitly — never `git add -A`. The message says *why* the change was made; the diff already says what it did.
+
+## Writing
+
+Every sentence the port emits or carries is written for one reader, and the
+register follows the reader:
+
+- User, a person or a coding harness: the documentation under `docs/`, the
+  text an adapter shows from a typed error. Short and plain: what happened
+  and what to do next, naming a command or a page, never a package, a
+  function, a table, or a Kubernetes object.
+- Contributor, someone changing the port: specs, this file, package
+  documentation, commit messages, source comments. Precise, in the project's
+  own terms, with the reason a design is what it is.
+- Developer, someone debugging a running system: the typed errors' `Error()`
+  text, the conformance suite's failure output. Exact and complete: object,
+  operation, observed value, expected value, and the underlying error.
+
+An error has one code, one fixed user sentence in `message`, and one
+developer detail in a separate field shown only on request. The canonical
+statement, worked examples, and the review checklist are in the registers
+document in pkg:
+https://github.com/latere-ai/pkg/blob/main/docs/writing/registers.md
+The rule applies to new text and to reviews; existing text is fixed as it is
+touched.
