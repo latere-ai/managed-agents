@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   verify:
-    uses: latere-ai/ci/.github/workflows/go-verify.yml@30c69631ae265f8fe860de4687d3c7db2bb956aa # private-runner support
+    uses: latere-ai/ci/.github/workflows/go-verify.yml@7e647deb470d36984881681a7b66f7105596576f # private runner and optional coverage reports
     with:
       runs_on: linux-vm
       test_os: '["linux-vm"]'
