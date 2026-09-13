@@ -5,4 +5,4 @@
 # it. The checks live in lateregate; this file only calls it. Refs arrive on
 # stdin, once: a repository that adds its own check below reads $refs.
 refs=$(cat)
-printf '%s\n' "$refs" | go tool lateregate prepush || exit 1
+printf '%s\n' "$refs" | go -C internal/gate tool lateregate prepush -C ../.. || exit 1

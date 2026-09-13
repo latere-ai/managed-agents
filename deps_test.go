@@ -27,3 +27,13 @@ func TestModuleDependsOnNothing(t *testing.T) {
 		}
 	}
 }
+
+func TestModuleGraphContainsOnlyThePort(t *testing.T) {
+	out, err := exec.CommandContext(t.Context(), "go", "list", "-m", "all").CombinedOutput()
+	if err != nil {
+		t.Fatalf("read consumer module graph: %v\n%s", err, out)
+	}
+	if got := strings.TrimSpace(string(out)); got != "latere.ai/x/managed-agents" {
+		t.Fatalf("the port adds tool dependencies to its consumers:\n%s", got)
+	}
+}
