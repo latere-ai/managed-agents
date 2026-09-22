@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -17,10 +16,11 @@ import (
 // A private repository must route every job, including reusable-workflow
 // jobs, to the org runner. Hosted jobs stop before execution at the budget.
 func TestVerificationRunsWithoutHostedMinutes(t *testing.T) {
-	_, file, _, _ := runtime.Caller(0)
+	// Relative to this package's directory, where go test runs it. A path from
+	// runtime.Caller is module-relative when the test is built with -trimpath.
 	for _, name := range []string{"ci.yml"} {
 		t.Run(name, func(t *testing.T) {
-			body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "../../.github/workflows", name))
+			body, err := os.ReadFile(filepath.Join("../../.github/workflows", name))
 			if err != nil {
 				t.Fatal(err)
 			}
