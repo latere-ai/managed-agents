@@ -41,8 +41,8 @@ const (
 )
 
 // AccessMode is how a session may use a mounted repository. Runtimes advertise
-// the modes they honour in Capabilities, so a specification asking for more
-// than the runtime allows is refused before the session starts.
+// the modes they honor in Capabilities, so a specification asking for more than
+// the runtime allows is refused before the session starts.
 type AccessMode string
 
 const (
@@ -119,7 +119,7 @@ const (
 // EventKind is what a transcript event is. Unlike Role the set is deliberately
 // open: the kinds below are named so callers compare against a constant rather
 // than a bare string, while a runtime-native kind passes through unchanged
-// rather than being dropped or coerced into a neighbour.
+// rather than being dropped or coerced into a neighbor.
 type EventKind string
 
 const (
@@ -205,7 +205,7 @@ type SandboxSpec struct {
 //
 // Keeping attachments outside every repository destination is structural rather
 // than stylistic: it is what makes "this data is not ours to redistribute"
-// enforceable by the filesystem layout, not by the model's good behaviour.
+// enforceable by the filesystem layout, not by the model's good behavior.
 type AttachmentResource struct {
 	Path      string `json:"path"`
 	MediaType string `json:"media_type,omitempty"`
@@ -354,7 +354,7 @@ type Status struct {
 	Verdict        *Verdict       `json:"verdict,omitempty"`
 }
 
-// Event is one entry in a session's transcript, normalised across runtimes. ID
+// Event is one entry in a session's transcript, normalized across runtimes. ID
 // is stable, so re-reading the transcript neither duplicates entries nor
 // changes what an existing one means. Raw keeps the runtime's own payload
 // intact, because the transcript is the evidence for a run and must not be
