@@ -6,7 +6,7 @@ import (
 )
 
 // CanonicalRuntimeName folds operator-supplied text into the single spelling a
-// RuntimeName may take. Routes, catalogue entries, and references are compared
+// RuntimeName may take. Routes, catalog entries, and references are compared
 // as plain strings, so "Anthropic" and " anthropic " must not become two
 // runtimes; validation rejects any name that is not already its own canonical
 // form.
@@ -47,7 +47,7 @@ func (u Usage) TotalTokens() int64 {
 func (u Usage) CacheWritten() int64 { return u.CacheWrite + u.CacheWrite5m + u.CacheWrite1h }
 
 // Add accumulates another usage into u, bucket by bucket and meter by meter, so
-// a session's stages can be totalled. A zero Usage is a usable accumulator: the
+// a session's stages can be totaled. A zero Usage is a usable accumulator: the
 // maps are allocated only when the other side has something to put in them.
 func (u *Usage) Add(other Usage) {
 	u.InputFresh += other.InputFresh
@@ -97,7 +97,7 @@ func (s Status) Passed() bool { return s.Verdict != nil && s.Verdict.Passed() }
 // IsCompiled reports whether the artifact is build residue rather than a
 // result. Such files are machine-specific: they describe the sandbox that
 // produced them and reproduce nothing, so they are the first thing to drop when
-// a session's output is kept. The path is normalised before the test, so a
+// a session's output is kept. The path is normalized before the test, so a
 // backslash-separated path cannot smuggle a __pycache__ entry past it.
 func (a Artifact) IsCompiled() bool {
 	clean := path.Clean(strings.ReplaceAll(a.Path, "\\", "/"))

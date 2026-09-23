@@ -16,7 +16,7 @@ The outcome this spec reached is recorded in *Outcome* below.
 Three vendors sell the same capability — run a long-lived, tool-using worker inside a sandbox, let it read and write files, and give me back what it did — and no two of them shape it alike.
 
 - One exposes a **remote session**. You create it, you get an identifier, you poll it from any process, you read its transcript, you release it. The session outlives the process that started it.
-- One exposes an **in-process driver over a hosted sandbox**. A blocking call drives the model loop on your machine; the sandbox is remote and the loop is not. Continuation works by serialising session state to your own storage and resuming from it.
+- One exposes an **in-process driver over a hosted sandbox**. A blocking call drives the model loop on your machine; the sandbox is remote and the loop is not. Continuation works by serializing session state to your own storage and resuming from it.
 - One is an **embeddable library**. Everything runs in your process. There is no identifier, no polling, and nothing to recover: if the process dies, the run died with it.
 
 An application that wants to support more than one of these has three bad options. It can write to the widest vendor and stub the rest, which makes the stubs lie. It can write to the narrowest, which throws away the durability the first vendor actually offers. Or it can branch per vendor at every call site, which is the thing an interface exists to prevent.
@@ -69,7 +69,7 @@ The port claims to cover three execution models. That claim is worth nothing uns
 | Vendor shape | Run is started by | Handle survives process death | Status is | Events are | Artifacts | Cancellation | Grading |
 |---|---|---|---|---|---|---|---|
 | Remote session | a create call returning an id | **yes** — poll from anywhere | polled | pulled after the fact | listed and fetched by id | a cancel call | first-class |
-| In-process driver, hosted sandbox | a blocking call on your goroutine | **only** if you serialise session state yourself | not exposed | returned in the result | sandbox-provider specific | close the session | none |
+| In-process driver, hosted sandbox | a blocking call on your goroutine | **only** if you serialize session state yourself | not exposed | returned in the result | sandbox-provider specific | close the session | none |
 | Embeddable library | a blocking call, in your process | **no** | not exposed | pushed to an observer during the run | files in the sandbox working directory | cancel the context | none |
 
 Five of the seven columns are already expressible, because the port already carries a capability for each:
@@ -105,7 +105,7 @@ and one correction to `SessionRef`'s own documentation, which stops asserting du
 
 This is deliberately a capability rather than a second interface. Splitting `Runtime` into resumable and non-resumable variants would push the branch back into every caller, which is the problem the port exists to remove. A flag keeps one interface and moves the decision to one place: a caller that requires durability checks `Capabilities` once, at admission, and refuses.
 
-The conformance suite gains the matching case. A runtime declaring `Resumable: true` must answer `Poll` for a reference reconstructed from its serialised form; a runtime declaring false must answer `ErrNotFound`, never a fabricated status.
+The conformance suite gains the matching case. A runtime declaring `Resumable: true` must answer `Poll` for a reference reconstructed from its serialized form; a runtime declaring false must answer `ErrNotFound`, never a fabricated status.
 
 ## The rules a schema cannot carry
 
@@ -182,7 +182,7 @@ Four things a general-purpose generator cannot infer, declared as `x-` keywords:
 | `x-go-name` | property, `$def` | Overrides the derived Go identifier. `id` becomes `ID`, `sha256` becomes `SHA256`, `url` becomes `URL`. |
 | `x-go-type` | property | Emits a named Go type instead of the structural one. `locator` becomes `json.RawMessage`; a raw payload is stored and returned, never parsed. |
 | `x-go-key-type` | object with `additionalProperties` | Types a map's key. `extra` becomes `map[Meter]int64`, not `map[string]int64`. Paired with `propertyNames` in the schema so the constraint is language-neutral too. |
-| `x-go-open` | string `$def` with `enum` | Emits the named type and its constants but no closed validation. `EventKind` and `Meter` are deliberately open: a runtime-native event kind passes through unchanged rather than being dropped or coerced into a neighbour. |
+| `x-go-open` | string `$def` with `enum` | Emits the named type and its constants but no closed validation. `EventKind` and `Meter` are deliberately open: a runtime-native event kind passes through unchanged rather than being dropped or coerced into a neighbor. |
 
 The named constants carry their own `description`, so a constant's meaning survives into the generated Go doc comment rather than being lost to a bare `const` block.
 
@@ -232,7 +232,7 @@ Built over three commits: the design, the port with its tests, and the schema-fi
 
 ### What measuring the vendors changed
 
-The fit table was written from the real surfaces, not from memory, and it moved the design once. Two of the three shapes turned out to be **in-process blocking drivers**, not remote sessions: one exposes a synchronous call returning a result, with events pushed to an observer during the run and no identifier at all; the other drives the model loop on the caller's goroutine against a hosted sandbox, with continuation done by serialising session state to the caller's own storage. Only one of the three has a session you can poll from another process.
+The fit table was written from the real surfaces, not from memory, and it moved the design once. Two of the three shapes turned out to be **in-process blocking drivers**, not remote sessions: one exposes a synchronous call returning a result, with events pushed to an observer during the run and no identifier at all; the other drives the model loop on the caller's goroutine against a hosted sandbox, with continuation done by serializing session state to the caller's own storage. Only one of the three has a session you can poll from another process.
 
 That is the shape `SessionRef` was originally written for, and its documentation promised durability unconditionally. `Capabilities.Resumable` is the correction, and the conformance suite now holds a runtime to whichever way it declares. The rest of the table needed no change: `Evaluation`, `Artifacts`, `Cancellation`, and `DurableEvents` already expressed the other differences, which is the capability model working as intended.
 
@@ -243,8 +243,8 @@ That is the shape `SessionRef` was originally written for, and its documentation
 Three things were not as planned:
 
 - **The library does not generate code.** `jsonschema-go` parses, marshals, resolves, and validates; its own documentation describes it as usable *for* code generation rather than as a generator. `internal/gen` is therefore ours, at about 350 lines. This is the right trade anyway: it is what made the `x-` keyword set exactly what the contract needs rather than what a general-purpose tool happens to support.
-- **Property order does not survive a round trip.** `Schema.PropertyOrder` is populated by inference from a Go type, not by unmarshalling a document, and `Properties` is a map. Field and type order had to become explicit keywords. `Schema.Extra` does preserve unknown keywords, which is what makes the whole annotation approach work.
-- **`Capabilities` became a wire type.** It had no JSON tags, because nothing had ever serialised it. Generating it gave it tags, and that is a small improvement: a non-Go adapter needs the capability declaration as much as it needs the specification.
+- **Property order does not survive a round trip.** `Schema.PropertyOrder` is populated by inference from a Go type, not by unmarshaling a document, and `Properties` is a map. Field and type order had to become explicit keywords. `Schema.Extra` does preserve unknown keywords, which is what makes the whole annotation approach work.
+- **`Capabilities` became a wire type.** It had no JSON tags, because nothing had ever serialized it. Generating it gave it tags, and that is a small improvement: a non-Go adapter needs the capability declaration as much as it needs the specification.
 
 The order of work held. The types were written by hand first, the tests were made green against them, and only then was the schema written to reproduce them — so the generated structs could be diffed against a known-good target. They matched field for field and tag for tag, which is the only reason the swap was a non-event.
 

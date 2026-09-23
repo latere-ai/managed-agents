@@ -22,7 +22,7 @@ type Runtime interface {
 }
 ```
 
-Every blocking method takes a context and must honour cancellation.
+Every blocking method takes a context and must honor cancellation.
 
 ## Declare honestly, then refuse
 
@@ -130,7 +130,7 @@ func (r *Runtime) check(ref managed.SessionRef) error {
 
 `Cancel` must also be idempotent, and cancelling an already-finished session is success.
 
-Keep the runtime's own payload in `Event.Raw`. The transcript is evidence, and normalising it down to this package's vocabulary and throwing the rest away destroys the part a reader may need most.
+Keep the runtime's own payload in `Event.Raw`. The transcript is evidence, and normalizing it down to this package's vocabulary and throwing the rest away destroys the part a reader may need most.
 
 ## Errors
 

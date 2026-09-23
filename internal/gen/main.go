@@ -183,7 +183,7 @@ func (g *generator) emitStruct(name string, def *jsonschema.Schema) error {
 // its constants. A closed set states them under oneOf, so a validator in any
 // language rejects an unknown value; an open set states them under x-go-consts
 // with no oneOf, so an unknown value passes through. The difference is the
-// whole point of the two spellings and is why the generator does not normalise
+// whole point of the two spellings and is why the generator does not normalize
 // them into one.
 func (g *generator) emitStringType(name string, def *jsonschema.Schema) error {
 	g.body.WriteString("\n")
@@ -301,7 +301,7 @@ func (g *generator) goType(schema *jsonschema.Schema, required bool) (string, er
 	}
 }
 
-// goName is the Go identifier for a schema name, honouring an x-go-name
+// goName is the Go identifier for a schema name, honoring an x-go-name
 // override. Without one it upper-cases each underscore-separated word, which is
 // right for every name in the contract that does not contain an initialism —
 // and the initialisms are exactly what the override exists for.

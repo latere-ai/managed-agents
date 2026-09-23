@@ -37,7 +37,7 @@ Point any JSON Schema code generator at the document. Six `x-` keywords carry wh
 | `x-go-key-type` | map | The key type of a map, so a meter map is `map[Meter]int64`. Paired with `propertyNames` so the constraint is language-neutral too. |
 | `x-go-open` | string type | The named values are documentation, not validation. |
 
-**Closed and open enums are spelled differently, on purpose.** A closed set states its values under `oneOf`, each entry carrying `const`, a `title` naming it, and a `description` — so a validator in any language rejects an unknown value, and a generator still gets names and docs. An open set (`EventKind`, `Meter`) states the same list under `x-go-consts` and *no* `oneOf`, so an unknown value passes validation unchanged. That difference exists because a transcript is evidence: coercing a runtime's own event kind into a neighbouring one would falsify it.
+**Closed and open enums are spelled differently, on purpose.** A closed set states its values under `oneOf`, each entry carrying `const`, a `title` naming it, and a `description` — so a validator in any language rejects an unknown value, and a generator still gets names and docs. An open set (`EventKind`, `Meter`) states the same list under `x-go-consts` and *no* `oneOf`, so an unknown value passes validation unchanged. That difference exists because a transcript is evidence: coercing a runtime's own event kind into a neighboring one would falsify it.
 
 **Optionality.** A property absent from `required` is optional. Whether that becomes a pointer is derived rather than declared: an optional *object* needs one to distinguish absent from zero; everything else takes its zero value.
 

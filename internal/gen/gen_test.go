@@ -141,7 +141,7 @@ func TestSchemaRejectsWhatTheContractForbids(t *testing.T) {
 
 // TestEventKindStaysOpen is the counterpart: EventKind names four kinds and
 // must still accept a runtime's own, because the transcript is evidence and
-// coercing an unknown kind into a neighbour would falsify it.
+// coercing an unknown kind into a neighbor would falsify it.
 func TestEventKindStaysOpen(t *testing.T) {
 	root := loadSchema(t)
 	wrapper := &jsonschema.Schema{Ref: "#/$defs/EventKind", Defs: root.Defs}

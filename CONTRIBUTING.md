@@ -25,7 +25,7 @@ docs/                    user-facing documentation
 
 **1. The schema is the source.** Every wire type is generated. To change one, edit `schema/managed.json` and run `go generate ./...`. A test fails if the committed `types.gen.go` does not match what the schema produces, so the two cannot drift apart quietly.
 
-The exceptions are `State` and `Grade`. They are strings on the wire but *ordered* in Go — a lifecycle that only moves forwards, and a judgement that is either decided or not — and the hand-written marshalling is what keeps the wire form independent of the numbering that order needs. Everything else is a plain string type and is generated.
+The exceptions are `State` and `Grade`. They are strings on the wire but *ordered* in Go — a lifecycle that only moves forwards, and a judgment that is either decided or not — and the hand-written marshaling is what keeps the wire form independent of the numbering that order needs. Everything else is a plain string type and is generated.
 
 **2. The module depends on nothing.** No import outside the standard library, in the package or its tests. `TestModuleDependsOnNothing` enforces it. This is the port's one promise to a third party: adopting the contract costs them nothing in their module graph. That is also why the generator and the CI gates are each their own module — a tool requirement in the root `go.mod` would reach every consumer for a program none of them run. `make deps` checks both halves: that no root `go.sum` exists at all, and that the packages a consumer builds import nothing outside the standard library.
 
@@ -43,7 +43,7 @@ A rule that is only in the Go code is invisible to the TypeScript adapter someon
 
 ## Adding a capability
 
-`Capabilities` grows when a backend genuinely cannot do something and no existing flag says so. Before adding one, check that an existing flag does not already cover it — `DurableEvents` and `Resumable` are near neighbours, and conflating them was the bug that produced the second one.
+`Capabilities` grows when a backend genuinely cannot do something and no existing flag says so. Before adding one, check that an existing flag does not already cover it — `DurableEvents` and `Resumable` are near neighbors, and conflating them was the bug that produced the second one.
 
 A new flag needs a `contracttest` case that holds a runtime to *both* declarations. A capability nothing tests is a comment.
 

@@ -2,8 +2,8 @@ package managed
 
 // The two ordered enums are hand-written rather than generated. State and Grade
 // are string values on the wire, but in Go they carry an order — a lifecycle
-// that only moves forwards, and a judgement that is either decided or not — and
-// the marshalling below is what keeps the wire form independent of the numbering
+// that only moves forwards, and a judgment that is either decided or not — and
+// the marshaling below is what keeps the wire form independent of the numbering
 // the order needs. Every other enum in the contract is a plain string type and
 // is generated from the schema.
 
@@ -74,7 +74,7 @@ func (s *State) UnmarshalJSON(raw []byte) error {
 type Grade uint8
 
 // The grades an evaluator can record. GradeUnknown is the zero value and
-// GradePending is a judgement not yet made, so neither may be read as a pass.
+// GradePending is a judgment not yet made, so neither may be read as a pass.
 // GradeNeedsRevision leaves the revision budget open where GradeExhausted
 // means it is spent, and GradeFailed is a decided rejection of the work.
 const (
@@ -95,7 +95,7 @@ var gradeNames = map[Grade]string{
 	GradeFailed:        "failed",
 }
 
-// Decided reports whether the evaluator has reached a final judgement;
+// Decided reports whether the evaluator has reached a final judgment;
 // GradeUnknown and GradePending have not.
 func (g Grade) Decided() bool {
 	return g == GradePassed || g == GradeNeedsRevision || g == GradeExhausted || g == GradeFailed

@@ -12,7 +12,7 @@ import "context"
 // goes terminal or is cancelled, until Release completes — which is why capture
 // must precede release.
 //
-// Every method that can block takes a context and must honour its
+// Every method that can block takes a context and must honor its
 // cancellation, so a session can be abandoned from outside.
 type Runtime interface {
 	// Name is the canonical name this runtime answers to, and the name every
@@ -39,7 +39,7 @@ type Runtime interface {
 	// observations must satisfy ValidateObservation.
 	Poll(context.Context, SessionRef) (Status, error)
 
-	// Events returns the session's transcript as the runtime normalised it, in
+	// Events returns the session's transcript as the runtime normalized it, in
 	// the order the runtime reports. It is readable until Release.
 	Events(context.Context, SessionRef) ([]Event, error)
 

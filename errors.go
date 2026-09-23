@@ -15,7 +15,7 @@ var (
 	ErrInvalidSpec = errors.New("invalid managed session specification")
 	// ErrUnsupported reports a well-formed specification asking for something
 	// this runtime cannot do. It is a refusal made before anything remote is
-	// created, never a licence to run with the unsupported part dropped.
+	// created, never a license to run with the unsupported part dropped.
 	ErrUnsupported = errors.New("managed session capability unsupported")
 	// ErrRuntimeMismatch reports a reference handed to an adapter that did not
 	// start the session. Routing on RuntimeName is what stops one adapter from

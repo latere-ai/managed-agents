@@ -3,7 +3,7 @@
 //
 // It exists to be the thing the conformance suite is validated against, and to
 // give an application a runtime it can develop and test against without a
-// vendor account. Config scripts its behaviour — how long a session runs, what
+// vendor account. Config scripts its behavior — how long a session runs, what
 // verdict it reaches, which files it produces, and which call fails — so a
 // caller's own error paths can be driven without a fake runtime wrapped around
 // a real one.
@@ -49,7 +49,7 @@ const (
 	FailRelease  FailurePoint = "release"
 )
 
-// Config is the scripted behaviour of one Runtime: which model it advertises,
+// Config is the scripted behavior of one Runtime: which model it advertises,
 // how many polls a session runs for, what verdict and artifacts it produces,
 // and where it fails. NewWithStore fills in the zero values, so the zero
 // Config is a usable happy path.
@@ -124,7 +124,7 @@ func NewWithStore(store *Store, config Config) *Runtime {
 	if store == nil || config.NonResumable {
 		// A non-resumable runtime never shares state with another Runtime,
 		// which is what makes a rebuild lose the sessions rather than find
-		// them. Honouring the caller's Store here would advertise durability
+		// them. Honoring the caller's Store here would advertise durability
 		// the capability says it does not have.
 		store = NewStore()
 	}
@@ -188,7 +188,7 @@ func (r *Runtime) Models(ctx context.Context) ([]managed.Model, error) {
 }
 
 // Validate checks the spec against the advertised capabilities and rejects an
-// exact model that is not the configured one. It has no context to honour, so
+// exact model that is not the configured one. It has no context to honor, so
 // it reads the capabilities directly rather than through Capabilities.
 func (r *Runtime) Validate(spec managed.SessionSpec) error {
 	if err := r.failure(FailValidate); err != nil {
