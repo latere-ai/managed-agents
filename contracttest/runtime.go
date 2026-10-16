@@ -18,8 +18,11 @@ package contracttest
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"path"
 	"testing"
 
 	managed "latere.ai/x/managed-agents"
@@ -166,6 +169,57 @@ func (s Suite) Run(t *testing.T) {
 		}
 	})
 
+	t.Run("inputs match the declaration", func(t *testing.T) {
+		runtime := s.New()
+		capabilities := supports(t, runtime)
+		withInput := inputSpec()
+		if capabilities.InputDir == "" {
+			// No input directory is a refusal, never a quiet copy into the
+			// workspace, where the agent could change the file or commit it.
+			if err := runtime.Validate(withInput); !errors.Is(err, managed.ErrUnsupported) {
+				t.Fatalf("Validate(input) without an input directory = %v, want ErrUnsupported", err)
+			}
+			return
+		}
+		if !path.IsAbs(capabilities.InputDir) {
+			t.Fatalf("InputDir %q is not an absolute sandbox path", capabilities.InputDir)
+		}
+		ref := start(t, runtime, withInput)
+		pollTerminal(t, runtime, ref, managed.GradingNotRequested)
+		if !capabilities.Artifacts {
+			return
+		}
+		artifacts, err := runtime.ListArtifacts(context.Background(), ref)
+		if err != nil {
+			t.Fatalf("ListArtifacts: %v", err)
+		}
+		for _, artifact := range artifacts {
+			if path.Base(artifact.Path) == inputName {
+				t.Errorf("input listed as an artifact the session produced: %+v", artifact)
+			}
+		}
+	})
+
+	t.Run("findings rounds match the declaration", func(t *testing.T) {
+		runtime := s.New()
+		capabilities := supports(t, runtime)
+		if !capabilities.Evaluation {
+			t.Skip("runtime does not grade")
+		}
+		withFindings := spec(true)
+		withFindings.Evaluation.Findings = "findings.json"
+		if !capabilities.FindingsRounds {
+			if err := runtime.Validate(withFindings); !errors.Is(err, managed.ErrUnsupported) {
+				t.Fatalf("Validate(findings) without findings rounds = %v, want ErrUnsupported", err)
+			}
+			return
+		}
+		status := pollTerminal(t, runtime, start(t, runtime, withFindings), managed.GradingRequested)
+		if status.Verdict == nil || !status.Verdict.Grade.Decided() {
+			t.Fatalf("graded terminal status with findings = %+v", status)
+		}
+	})
+
 	t.Run("cancel retains evidence", func(t *testing.T) {
 		runtime := s.New()
 		if !supports(t, runtime).Cancellation {
@@ -257,6 +311,21 @@ func spec(graded bool) managed.SessionSpec {
 	if graded {
 		spec.Evaluation = &managed.EvaluationSpec{Rubric: "The answer is correct.", MaxRevisions: 1}
 	}
+	return spec
+}
+
+// inputName is the file the input case hands a session. Its name is unusual
+// on purpose, so finding it among the artifacts can only mean the runtime
+// copied the input into what the session produced.
+const inputName = "contracttest-input.txt"
+
+func inputSpec() managed.SessionSpec {
+	spec := spec(false)
+	content := []byte("read me, do not change me")
+	sum := sha256.Sum256(content)
+	spec.Resources = []managed.Resource{{Kind: managed.ResourceInput, Input: &managed.InputResource{
+		Path: inputName, MediaType: "text/plain", Content: content, SHA256: hex.EncodeToString(sum[:]),
+	}}}
 	return spec
 }
 

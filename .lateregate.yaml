@@ -54,9 +54,10 @@ spec:
   numbered: true
   wikilinks: true
   require: [title, status]
-  # This tree's own word for a settled spec. The vocabulary is closed so a
-  # typo becomes a failure rather than a new state nobody defined.
-  status: [built, archived]
+  # This tree's own words: `designed` for a decision taken whose work is not
+  # finished, `built` once its acceptance criteria hold. The vocabulary is
+  # closed so a typo becomes a failure rather than a new state nobody defined.
+  status: [designed, built, archived]
   # `archived` is the terminal status. `built` is not: a shipped spec is the
   # live record of what the surface does and belongs where a reader looks.
   archive:
@@ -66,3 +67,10 @@ spec:
 # The identity shape of the family: specs/infrastructure/identity.md in latere-ai/specs
 identity:
   role: none
+
+waive:
+  license:
+    reason: >-
+      no license is chosen yet: the owner picks one when the repository goes
+      public, and every source file then carries its SPDX header
+    until: 2026-11-30

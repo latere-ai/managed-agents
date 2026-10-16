@@ -35,13 +35,6 @@ This package fixes that in two ways. A runtime **declares** what it cannot do, a
 go get latere.ai/x/managed-agents
 ```
 
-This is a private module, so `go` needs to be told not to look for it on the public proxy:
-
-```
-export GOPRIVATE=latere.ai/x/*
-git config --global url."https://$GITHUB_TOKEN@github.com/latere-ai/".insteadOf "https://github.com/latere-ai/"
-```
-
 The package name is `managed`:
 
 ```go
@@ -86,7 +79,7 @@ if !capabilities.Resumable {
 }
 ```
 
-`Capabilities` also states whether the runtime can grade, cancel, enumerate artifacts, or store the transcript, which package managers and network modes it supports, and how large an attachment may be. `ValidateCapabilities` refuses a specification asking for more than a runtime declares — before anything remote exists. There is no best-effort mode that quietly drops the part the runtime cannot do.
+`Capabilities` also states whether the runtime can grade, cancel, enumerate artifacts, store the transcript, give a session a file it can read and not change, or check a findings file every round, which package managers and network modes it supports, and how large an attachment may be. `ValidateCapabilities` refuses a specification asking for more than a runtime declares — before anything remote exists. There is no best-effort mode that quietly drops the part the runtime cannot do.
 
 ## What this is not
 

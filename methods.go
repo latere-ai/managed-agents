@@ -103,3 +103,9 @@ func (a Artifact) IsCompiled() bool {
 	clean := path.Clean(strings.ReplaceAll(a.Path, "\\", "/"))
 	return strings.HasSuffix(clean, ".pyc") || strings.HasSuffix(clean, ".pyo") || strings.Contains(clean, "__pycache__/")
 }
+
+// DetailVendorCost is the Usage.Details entry a runtime reports a vendor's own
+// figure for what the session cost under, in micro-USD, where the vendor
+// gives one. It is a detail, never priced: a caller reads it to compare with
+// its own price, not to charge it.
+const DetailVendorCost = "vendor_cost_micro_usd"

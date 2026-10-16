@@ -19,6 +19,14 @@ type RuntimeName string
 // settle.
 type Meter string
 
+const (
+	// MeterChargedCost is the micro-USD a runtime's own platform has already
+	// charged someone for the session, such as a platform charging the person who
+	// started it. It is reported, never priced: a rate card that priced it would
+	// charge the same money a second time.
+	MeterChargedCost Meter = "charged.cost_usd_micro"
+)
+
 // NetworkMode is the outbound network policy a sandbox runs under. The empty
 // value is not a mode: validation reads an omitted mode as none, so a
 // specification that forgets to say gets the closed sandbox rather than the
@@ -69,6 +77,10 @@ const (
 	// ResourceRepository names an HTTPS repository to place at a destination
 	// inside the workspace.
 	ResourceRepository ResourceKind = "repository"
+
+	// ResourceInput carries a file the session reads and may not change, placed
+	// outside the workspace under Capabilities.InputDir.
+	ResourceInput ResourceKind = "input"
 )
 
 // TerminalReason says why a session stopped, and is carried only on a terminal
@@ -213,6 +225,19 @@ type AttachmentResource struct {
 	SHA256    string `json:"sha256"`
 }
 
+// InputResource is a file the session reads and may not change, such as the one
+// copy of a paper every run of a study is given. The runtime places it at Path
+// under Capabilities.InputDir, outside the workspace, and makes it read-only,
+// so the agent can neither edit it nor commit it into what the session
+// produces. SHA256 is verified against Content during validation, as for an
+// attachment, and is what a run's record cites as the input it was given.
+type InputResource struct {
+	Path      string `json:"path"`
+	MediaType string `json:"media_type,omitempty"`
+	Content   []byte `json:"content"`
+	SHA256    string `json:"sha256"`
+}
+
 // RepositoryResource is a version-control repository the session works in. A
 // runtime may mount it, clone it, or stage it some other way, as long as the
 // resulting filesystem and write authority match Access. CredentialRef names a
@@ -239,15 +264,25 @@ type Resource struct {
 	Kind       ResourceKind        `json:"kind"`
 	Attachment *AttachmentResource `json:"attachment,omitempty"`
 	Repository *RepositoryResource `json:"repository,omitempty"`
+	Input      *InputResource      `json:"input,omitempty"`
 }
 
 // EvaluationSpec makes a session graded. An absent EvaluationSpec on
 // SessionSpec is the only way to say "ungraded", which is why a present one
-// must carry a non-empty rubric and a positive revision budget: a zero value
-// must not be readable as grading against nothing.
+// must carry a non-empty rubric: a zero value must not be readable as grading
+// against nothing. MaxRevisions may be zero, which grades the first attempt and
+// never revises it, so a study can keep what a run produced before a rubric
+// pushed it.
+//
+// Findings names the workspace file that holds the run's findings as data. A
+// runtime that declares FindingsRounds keeps it after every worker-side stage,
+// checks it, and gives the problems to the grader and to the revision, so a
+// file the system cannot read is never passed on a model's reading of the
+// rubric. Empty asks for none of this.
 type EvaluationSpec struct {
 	Rubric       string `json:"rubric"`
 	MaxRevisions int    `json:"max_revisions"`
+	Findings     string `json:"findings,omitempty"`
 }
 
 // SessionSpec is the complete intent for one session, independent of the
@@ -389,6 +424,10 @@ type Capabilities struct {
 	// caller templates it into the instructions rather than hard-coding one
 	// backend's filesystem layout.
 	OutputDir string `json:"output_dir,omitempty"`
+	// InputDir is the sandbox path inputs are placed under, outside the workspace.
+	// Empty means the runtime cannot hand a session a file it can read and not
+	// change, and a specification carrying an input is refused.
+	InputDir string `json:"input_dir,omitempty"`
 	// PackageManagers are the managers this runtime can install from, keyed by the
 	// name a Package carries.
 	PackageManagers map[string]bool `json:"package_managers,omitempty"`
@@ -432,4 +471,9 @@ type Capabilities struct {
 	// MaxLocatorBytes bounds the locator this runtime writes into a reference.
 	// Zero means DefaultMaxLocatorBytes.
 	MaxLocatorBytes int `json:"max_locator_bytes,omitempty"`
+	// FindingsRounds reports that the runtime keeps the findings file of every
+	// grading round and checks it before the grader reads it, which an
+	// EvaluationSpec asks for by naming Findings. A runtime that grades on a
+	// vendor's side cannot reach inside that loop and declares false.
+	FindingsRounds bool `json:"findings_rounds,omitempty"`
 }

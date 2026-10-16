@@ -30,6 +30,11 @@ const Name managed.RuntimeName = "memory"
 // with Name left it untyped and one edit away from inheriting the wrong type.
 const OutputDir = "/workspace/outputs/"
 
+// InputDir is the input directory a memory runtime declares when Config asks
+// it to accept inputs. It is beside the workspace's outputs, as a real
+// runtime's is.
+const InputDir = "/workspace/inputs/"
+
 // FailurePoint names a runtime boundary that can be made to fail. Keying
 // Config.Failures by one lets a test drive the error path of a single call
 // without standing up a fake runtime around the real one.
@@ -78,6 +83,15 @@ type Config struct {
 	// a graded specification is refused by Validate. It needs no other change:
 	// a session that cannot start cannot reach a verdict.
 	NoEvaluation bool
+	// InputDir is the input directory the runtime declares, InputDir for the
+	// usual one. Empty declares none, so a specification carrying an input is
+	// refused, as on a runtime that cannot hand a session a read-only file. The
+	// runtime keeps nothing there either way.
+	InputDir string
+	// FindingsRounds declares that the runtime checks the findings of each
+	// grading round, so a caller that asks for it only where it is declared
+	// can be tested both ways. The runtime keeps no rounds either way.
+	FindingsRounds bool
 }
 
 // Store holds the sessions. It lives outside Runtime on purpose: that is what
@@ -149,8 +163,10 @@ func (r *Runtime) Name() managed.RuntimeName { return Name }
 
 // Capabilities advertises every capability the contract defines, so a spec
 // exercising any of them is accepted here and the path under test is the
-// caller's rather than a capability rejection. The one exception is
-// resumability, which Config.NonResumable turns off.
+// caller's rather than a capability rejection. The flags in Config turn single
+// ones off. Inputs and findings rounds are the opposite: they are declared
+// only when Config asks, because the runtime does none of the work behind
+// them, and a caller that gates on them must be testable on both answers.
 func (r *Runtime) Capabilities(ctx context.Context) (managed.Capabilities, error) {
 	if err := contextError(ctx); err != nil {
 		return managed.Capabilities{}, err
@@ -173,6 +189,8 @@ func (r *Runtime) capabilities() managed.Capabilities {
 		Artifacts:          !r.config.NoArtifacts,
 		Cancellation:       !r.config.NoCancellation,
 		Resumable:          !r.config.NonResumable,
+		InputDir:           r.config.InputDir,
+		FindingsRounds:     r.config.FindingsRounds,
 		MaxAttachmentBytes: 64 << 20,
 		MaxLocatorBytes:    managed.DefaultMaxLocatorBytes,
 	}

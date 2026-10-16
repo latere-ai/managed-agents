@@ -11,26 +11,35 @@ import (
 )
 
 // TestRuntimeContract runs the conformance suite against the resumable
-// runtime. Restart rebuilds a Runtime around the same Store, which is what a
-// process restart looks like to a backend that keeps its sessions somewhere
-// outside the Runtime value.
+// runtime, declaring inputs and findings rounds as well. Restart rebuilds a
+// Runtime around the same Store, which is what a process restart looks like to
+// a backend that keeps its sessions somewhere outside the Runtime value.
 func TestRuntimeContract(t *testing.T) {
 	files := map[string][]byte{"outputs/answer.md": []byte("the answer"), "outputs/log.txt": []byte("...")}
+	config := Config{Files: files, InputDir: InputDir, FindingsRounds: true}
 	contracttest.Suite{
 		// A fresh Store per case: the suite promises no state leaks between
 		// them, and sharing one here would make the first case that enumerates
 		// sessions fail on the order the cases happen to run in.
-		New: func() managed.Runtime { return NewWithStore(nil, Config{Files: files}) },
+		New: func() managed.Runtime { return NewWithStore(nil, config) },
 		Restart: func(previous managed.Runtime) managed.Runtime {
-			return NewWithStore(previous.(*Runtime).store, Config{Files: files})
+			return NewWithStore(previous.(*Runtime).store, config)
 		},
 	}.Run(t)
 }
 
+// TestDefaultRuntimeContract runs the suite on the zero Config, which grades
+// but declares neither inputs nor findings rounds: the refusal half of those
+// two cases, on a runtime that would otherwise accept the specification.
+func TestDefaultRuntimeContract(t *testing.T) {
+	contracttest.Run(t, func() managed.Runtime { return New() })
+}
+
 // TestNonResumableRuntimeContract runs the same suite against a runtime that
-// declares away four capabilities: it cannot survive a restart, enumerate
-// artifacts, cancel, or grade. Every capability has to pass the
-// suite in both declarations, or the flag is a comment rather than a contract.
+// declares away every capability it can: it cannot survive a restart,
+// enumerate artifacts, cancel, grade, take an input, or keep findings rounds.
+// Every capability has to pass the suite in both declarations, or the flag is
+// a comment rather than a contract.
 func TestNonResumableRuntimeContract(t *testing.T) {
 	config := Config{NonResumable: true, NoArtifacts: true, NoCancellation: true, NoEvaluation: true}
 	contracttest.Suite{

@@ -48,18 +48,82 @@ func TestSessionSpecValidate(t *testing.T) {
 		{"empty instructions", func(s *SessionSpec) { s.Instructions = " " }, "instructions"},
 		{"empty task", func(s *SessionSpec) { s.Task = "" }, "task"},
 		{"empty rubric", func(s *SessionSpec) { s.Evaluation.Rubric = "" }, "evaluation.rubric"},
-		{"zero revision budget", func(s *SessionSpec) { s.Evaluation.MaxRevisions = 0 }, "evaluation.max_revisions"},
+		{"negative revision budget", func(s *SessionSpec) { s.Evaluation.MaxRevisions = -1 }, "evaluation.max_revisions"},
+		{"unsafe findings", func(s *SessionSpec) { s.Evaluation.Findings = "../findings.json" }, "evaluation.findings"},
+		{"absolute findings", func(s *SessionSpec) { s.Evaluation.Findings = "/findings.json" }, "evaluation.findings"},
 		{"shell fragment", func(s *SessionSpec) { s.Sandbox.Bootstrap = [][]string{{}} }, "sandbox.bootstrap[0]"},
 		{"open with secrets", func(s *SessionSpec) { s.Sandbox.Network.Mode = NetworkOpen }, "sandbox.network"},
 		{"noncanonical domain", func(s *SessionSpec) { s.Sandbox.Network.AllowedDomains[0] = "API.Example.com" }, "sandbox.network.allowed_domains[0]"},
 		{"secret outside allowlist", func(s *SessionSpec) { s.Sandbox.Network.SecretRefs["API_TOKEN"] = "other.example.com:key" }, "sandbox.network.secret_refs"},
 		{"unsafe attachment", func(s *SessionSpec) { s.Resources[0].Attachment.Path = "../data.csv" }, "resources[0].attachment.path"},
+		{"NUL in attachment path", func(s *SessionSpec) { s.Resources[0].Attachment.Path = "inputs/da\x00ta.csv" }, "resources[0].attachment.path"},
+		{"attachment with input payload", func(s *SessionSpec) { s.Resources[0].Input = &InputResource{} }, "resources[0]"},
 		{"wrong digest", func(s *SessionSpec) { s.Resources[0].Attachment.SHA256 = strings.Repeat("0", 64) }, "resources[0].attachment.sha256"},
 		{"unknown resource", func(s *SessionSpec) { s.Resources[0].Kind = "bucket" }, "resources[0].kind"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			spec := validSpec()
+			test.alter(&spec)
+			err := spec.Validate()
+			var invalid *InvalidSpecError
+			if !errors.As(err, &invalid) || invalid.Field != test.field {
+				t.Fatalf("error = %v, want InvalidSpecError field %q", err, test.field)
+			}
+		})
+	}
+}
+
+func TestZeroRevisionBudgetAndFindings(t *testing.T) {
+	spec := validSpec()
+	spec.Evaluation.MaxRevisions = 0
+	spec.Evaluation.Findings = "outputs/findings.json"
+	if err := spec.Validate(); err != nil {
+		t.Fatalf("a graded session with no revision and a findings file: %v", err)
+	}
+}
+
+func inputSpec() SessionSpec {
+	body := []byte("%PDF-1.7")
+	digest := sha256.Sum256(body)
+	spec := validSpec()
+	spec.Resources = append(spec.Resources, Resource{Kind: ResourceInput, Input: &InputResource{
+		Path: "paper.pdf", Content: body, SHA256: hex.EncodeToString(digest[:]), MediaType: "application/pdf",
+	}})
+	return spec
+}
+
+func TestInputResourceValidation(t *testing.T) {
+	if err := inputSpec().Validate(); err != nil {
+		t.Fatalf("valid input: %v", err)
+	}
+	// An input sits outside the workspace, so it may share a path with an
+	// attachment without the two colliding.
+	same := inputSpec()
+	same.Resources[1].Input.Path = same.Resources[0].Attachment.Path
+	same.Resources[1].Input.Content = same.Resources[0].Attachment.Content
+	same.Resources[1].Input.SHA256 = same.Resources[0].Attachment.SHA256
+	if err := same.Validate(); err != nil {
+		t.Fatalf("input sharing an attachment's path: %v", err)
+	}
+	tests := []struct {
+		name  string
+		alter func(*SessionSpec)
+		field string
+	}{
+		{"missing payload", func(s *SessionSpec) { s.Resources[1].Input = nil }, "resources[1]"},
+		{"attachment payload too", func(s *SessionSpec) { s.Resources[1].Attachment = s.Resources[0].Attachment }, "resources[1]"},
+		{"repository payload too", func(s *SessionSpec) { s.Resources[1].Repository = &RepositoryResource{} }, "resources[1]"},
+		{"absolute path", func(s *SessionSpec) { s.Resources[1].Input.Path = "/etc/paper.pdf" }, "resources[1].input.path"},
+		{"escaping path", func(s *SessionSpec) { s.Resources[1].Input.Path = "../paper.pdf" }, "resources[1].input.path"},
+		{"NUL in path", func(s *SessionSpec) { s.Resources[1].Input.Path = "pa\x00per.pdf" }, "resources[1].input.path"},
+		{"malformed digest", func(s *SessionSpec) { s.Resources[1].Input.SHA256 = "abc" }, "resources[1].input.sha256"},
+		{"wrong digest", func(s *SessionSpec) { s.Resources[1].Input.SHA256 = strings.Repeat("0", 64) }, "resources[1].input.sha256"},
+		{"duplicate input", func(s *SessionSpec) { s.Resources = append(s.Resources, s.Resources[1]) }, "resources[2]"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			spec := inputSpec()
 			test.alter(&spec)
 			err := spec.Validate()
 			var invalid *InvalidSpecError
@@ -146,6 +210,41 @@ func TestValidateCapabilities(t *testing.T) {
 	}
 	if err := ValidateCapabilities("memory", capabilities, validSpec()); err != nil {
 		t.Fatalf("supported spec: %v", err)
+	}
+	withInput := capabilities
+	withInput.InputDir = "/mnt/inputs"
+	withInput.FindingsRounds = true
+	full := inputSpec()
+	full.Evaluation.Findings = "outputs/findings.json"
+	if err := ValidateCapabilities("memory", withInput, full); err != nil {
+		t.Fatalf("supported input and findings: %v", err)
+	}
+	for name, test := range map[string]struct {
+		capabilities Capabilities
+		spec         func() SessionSpec
+		field        string
+	}{
+		"input without an input directory": {capabilities, inputSpec, "resources[1].input"},
+		"input over the size limit": {withInput, func() SessionSpec {
+			s := inputSpec()
+			s.Resources[1].Input.Content = []byte("much too large")
+			sum := sha256.Sum256(s.Resources[1].Input.Content)
+			s.Resources[1].Input.SHA256 = hex.EncodeToString(sum[:])
+			return s
+		}, "resources[1].input.content"},
+		"findings without findings rounds": {capabilities, func() SessionSpec {
+			s := validSpec()
+			s.Evaluation.Findings = "outputs/findings.json"
+			return s
+		}, "evaluation.findings"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := ValidateCapabilities("memory", test.capabilities, test.spec())
+			var unsupported *UnsupportedError
+			if !errors.As(err, &unsupported) || unsupported.Field != test.field {
+				t.Fatalf("error = %v, want UnsupportedError field %q", err, test.field)
+			}
+		})
 	}
 	tests := []struct {
 		name  string

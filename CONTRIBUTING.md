@@ -76,17 +76,6 @@ Each surface has one audience, and mixing them is the failure to avoid:
 
 Keep the argument in `specs/` and out of the README. Keep the usage in the README and out of `specs/`.
 
-## Private module
-
-This repository is private, so `go` needs to be told not to look for it on the public proxy:
-
-```
-export GOPRIVATE=latere.ai/x/*
-git config --global url."https://$GITHUB_TOKEN@github.com/latere-ai/".insteadOf "https://github.com/latere-ai/"
-```
-
-Continuous integration needs the same, through a token with read access. Without it `go get` fails at the proxy with a message that does not name the cause.
-
 ## Commits
 
 One logical change per commit, staged explicitly — never `git add -A`. The message says *why* the change was made; the diff already says what it did.

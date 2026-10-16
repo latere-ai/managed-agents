@@ -20,6 +20,7 @@
     "NetworkPolicy",
     "SandboxSpec",
     "AttachmentResource",
+    "InputResource",
     "RepositoryResource",
     "Resource",
     "EvaluationSpec",
@@ -43,7 +44,15 @@
 
     "Meter": {
       "description": "Meter names a billable quantity that is not a token bucket, such as a container second or a hosted tool call. The set is open because each runtime emits its own, but a meter must be priced before a session using it can settle.",
-      "type": "string"
+      "type": "string",
+      "x-go-open": true,
+      "oneOf": [
+        {
+          "const": "charged.cost_usd_micro",
+          "title": "MeterChargedCost",
+          "description": "MeterChargedCost is the micro-USD a runtime's own platform has already charged someone for the session, such as a platform charging the person who started it. It is reported, never priced: a rate card that priced it would charge the same money a second time."
+        }
+      ]
     },
 
     "NetworkMode": {
@@ -98,6 +107,11 @@
           "const": "repository",
           "title": "ResourceRepository",
           "description": "ResourceRepository names an HTTPS repository to place at a destination inside the workspace."
+        },
+        {
+          "const": "input",
+          "title": "ResourceInput",
+          "description": "ResourceInput carries a file the session reads and may not change, placed outside the workspace under Capabilities.InputDir."
         }
       ]
     },
@@ -278,6 +292,20 @@
       }
     },
 
+    "InputResource": {
+      "description": "InputResource is a file the session reads and may not change, such as the one copy of a paper every run of a study is given. The runtime places it at Path under Capabilities.InputDir, outside the workspace, and makes it read-only, so the agent can neither edit it nor commit it into what the session produces. SHA256 is verified against Content during validation, as for an attachment, and is what a run's record cites as the input it was given.",
+      "type": "object",
+      "additionalProperties": false,
+      "x-field-order": ["path", "media_type", "content", "sha256"],
+      "required": ["path", "content", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "media_type": { "type": "string" },
+        "content": { "type": "string", "contentEncoding": "base64", "x-go-type": "[]byte" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$", "x-go-name": "SHA256" }
+      }
+    },
+
     "RepositoryResource": {
       "description": "RepositoryResource is a version-control repository the session works in. A runtime may mount it, clone it, or stage it some other way, as long as the resulting filesystem and write authority match Access. CredentialRef names a credential and never carries one; read-write access requires it, because an unauthenticated write mount would fail only once the session was already running.\n\nAccessReadOnly states intent. The enforcement is the credential's own scope, so a read-only destination must be given a read-only credential: the field tells the runtime what to arrange, it does not by itself prevent a push.",
       "type": "object",
@@ -297,24 +325,26 @@
       "description": "Resource is the tagged union of things a session can be given. Kind selects which payload is set, and exactly one must be. An unknown kind fails validation rather than being ignored, so a session never runs quietly missing an input the caller asked for.",
       "type": "object",
       "additionalProperties": false,
-      "x-field-order": ["kind", "attachment", "repository"],
+      "x-field-order": ["kind", "attachment", "repository", "input"],
       "required": ["kind"],
       "properties": {
         "kind": { "$ref": "#/$defs/ResourceKind" },
         "attachment": { "$ref": "#/$defs/AttachmentResource" },
-        "repository": { "$ref": "#/$defs/RepositoryResource" }
+        "repository": { "$ref": "#/$defs/RepositoryResource" },
+        "input": { "$ref": "#/$defs/InputResource" }
       }
     },
 
     "EvaluationSpec": {
-      "description": "EvaluationSpec makes a session graded. An absent EvaluationSpec on SessionSpec is the only way to say \"ungraded\", which is why a present one must carry a non-empty rubric and a positive revision budget: a zero value must not be readable as grading against nothing.",
+      "description": "EvaluationSpec makes a session graded. An absent EvaluationSpec on SessionSpec is the only way to say \"ungraded\", which is why a present one must carry a non-empty rubric: a zero value must not be readable as grading against nothing. MaxRevisions may be zero, which grades the first attempt and never revises it, so a study can keep what a run produced before a rubric pushed it.\n\nFindings names the workspace file that holds the run's findings as data. A runtime that declares FindingsRounds keeps it after every worker-side stage, checks it, and gives the problems to the grader and to the revision, so a file the system cannot read is never passed on a model's reading of the rubric. Empty asks for none of this.",
       "type": "object",
       "additionalProperties": false,
-      "x-field-order": ["rubric", "max_revisions"],
+      "x-field-order": ["rubric", "max_revisions", "findings"],
       "required": ["rubric", "max_revisions"],
       "properties": {
         "rubric": { "type": "string", "minLength": 1 },
-        "max_revisions": { "type": "integer", "minimum": 1 }
+        "max_revisions": { "type": "integer", "minimum": 0 },
+        "findings": { "type": "string" }
       }
     },
 
@@ -473,6 +503,7 @@
       "additionalProperties": false,
       "x-field-order": [
         "output_dir",
+        "input_dir",
         "package_managers",
         "network_modes",
         "repository_modes",
@@ -482,11 +513,16 @@
         "cancellation",
         "resumable",
         "max_attachment_bytes",
-        "max_locator_bytes"
+        "max_locator_bytes",
+        "findings_rounds"
       ],
       "properties": {
         "output_dir": {
           "description": "OutputDir is the sandbox path a session is told to write its artifacts to. A caller templates it into the instructions rather than hard-coding one backend's filesystem layout.",
+          "type": "string"
+        },
+        "input_dir": {
+          "description": "InputDir is the sandbox path inputs are placed under, outside the workspace. Empty means the runtime cannot hand a session a file it can read and not change, and a specification carrying an input is refused.",
           "type": "string"
         },
         "package_managers": {
@@ -530,6 +566,10 @@
         "max_locator_bytes": {
           "description": "MaxLocatorBytes bounds the locator this runtime writes into a reference. Zero means DefaultMaxLocatorBytes.",
           "type": "integer", "minimum": 0
+        },
+        "findings_rounds": {
+          "description": "FindingsRounds reports that the runtime keeps the findings file of every grading round and checks it before the grader reads it, which an EvaluationSpec asks for by naming Findings. A runtime that grades on a vendor's side cannot reach inside that loop and declares false.",
+          "type": "boolean"
         }
       }
     }

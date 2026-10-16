@@ -2,7 +2,18 @@
 
 For someone putting a vendor behind this port. An adapter implements `managed.Runtime` and passes `contracttest`. Nothing else is required, and nothing else is accepted.
 
-Adapters live in their own repositories. This one holds the contract, not the implementations.
+An adapter can live in this repository, as its own Go module beside the contract so that a program importing only the contract never downloads a vendor's SDK, or in a repository of its own. Either way the obligations below are the same.
+
+## Adding a runtime
+
+1. Create a module for it: a directory here with its own `go.mod`, or a repository of its own.
+2. Implement `managed.Runtime`. Start from the `memory` runtime: it is short, and every method in it states the rule it follows.
+3. Declare in `Capabilities` what the vendor actually does, and call `managed.ValidateCapabilities` from `Validate`, so a request for more is refused before anything is created.
+4. Run the suite with a `Restart`, so the resumability you declare is tested: `contracttest.Suite{New: ..., Restart: ...}.Run(t)`.
+5. Add a test that runs one real session, skipped when the vendor credential is absent.
+6. Document the configuration the adapter needs: the credential, the base address, and anything a caller must set before `Start`.
+
+The application side, a name in its own catalog and the configuration it reads, belongs to the application's documentation, not this one.
 
 ## The interface
 
@@ -40,6 +51,8 @@ func (r *Runtime) Capabilities(context.Context) (managed.Capabilities, error) {
         Artifacts:          true,
         Cancellation:       true,
         Resumable:          true,   // sessions outlive this process
+        InputDir:           "/mnt/inputs/", // read-only files go here
+        FindingsRounds:     false,  // grading happens on the vendor's side
         MaxAttachmentBytes: 32 << 20,
     }, nil
 }
@@ -64,14 +77,18 @@ Two mistakes to avoid:
 - **Do not downgrade.** If a caller asks for `NetworkOpen` and you support only `NetworkAllowlist`, refuse. Silently tightening produces a session that fails deep inside the run for reasons the caller cannot see.
 - **Do not drop.** An unsupported package manager is `ErrUnsupported`, not a session that runs without the dependency.
 
-### The four capabilities people get wrong
+### The capabilities people get wrong
 
 | Flag | False means | Then |
 |---|---|---|
-| `Evaluation` | The vendor cannot grade against a rubric. | Refuse a spec carrying `Evaluation`. Do not grade it yourself from the transcript. |
+| `Evaluation` | Nothing can grade the work against a rubric. | Refuse a spec carrying `Evaluation`. |
+| `InputDir` (empty) | You cannot give a session a file it can read and not change. | Refuse a spec carrying an input. Do not copy it into the workspace, where the agent could edit it or hand it back as its own output. |
+| `FindingsRounds` | You cannot check the findings file after every round. | Refuse a spec naming `Findings`. A vendor that grades on its own side cannot reach inside that loop. |
 | `Artifacts` | You cannot enumerate what the session produced. | `ListArtifacts` refuses. An empty list would read as "it produced nothing". |
 | `Cancellation` | A started session cannot be stopped. | `Cancel` refuses. Do not return nil and keep running. |
 | `Resumable` | A `SessionRef` dies with this process. | A reference from a previous process must give `ErrNotFound`, never an invented status. |
+
+`Evaluation` does not require the vendor to have a grader of its own. You may declare it when you run the grader yourself, as long as the grader works in a context separate from the worker's, reads the work and the rubric rather than the worker's account of the work, and ends the session in the same terminal states a vendor grader would. A second session, or a subagent with its own context and read-only tools, qualifies. Grading inside the worker's own conversation, or from what the worker says it did, does not: that is the worker marking its own work.
 
 `Resumable` is the one worth dwelling on. If your vendor is an in-process library or an SDK that drives the loop on the caller's goroutine, you have no session to recover. Declaring `true` and answering a restarted `Poll` from a fresh in-memory map is the failure this flag exists to prevent: it works in every test and loses a live run on the first deploy.
 
@@ -155,7 +172,7 @@ func TestConformance(t *testing.T) {
 }
 ```
 
-`Run` covers the ungraded and graded lifecycles, that cancelling keeps the evidence readable, that release is idempotent and closes the reads, and that another runtime's reference is refused by all five methods that take one. Cases that need a capability you do not declare are skipped.
+`Run` covers the ungraded and graded lifecycles, that cancelling keeps the evidence readable, that release is idempotent and closes the reads, and that another runtime's reference is refused by all five methods that take one. Where a capability has two answers, the suite checks the one you declared: an input runs and never comes back as an artifact when you declare `InputDir`, and is refused when you do not; a findings file is graded when you declare `FindingsRounds`, and refused when you do not. Cases that need a capability you do not declare are skipped.
 
 To cover resumability, supply a `Restart` — a runtime backed by the same state as a new process would see:
 

@@ -5,7 +5,7 @@ status: designed
 
 # 002 — Every runtime plugs in here
 
-**Status:** designed. The decision below (keep this port and grow it, rather than start again) is taken; the work it lists is not built yet.
+**Status:** designed. The decision below (keep this port and grow it, rather than start again) is taken. Criteria 1 to 4 hold: the contract additions, the zero revision budget, their conformance cases and the adapter guide. The adapters and ReplicHAI's import are not built yet.
 
 **Scope:** make this module the one contract every managed-session runtime implements, for ReplicHAI first: bring back the three things ReplicHAI added to its own copy after this port was extracted, correct what the port says about grading, ship the Anthropic and Latere adapters here as their own modules, and leave a designed slot for an OpenAI adapter. ReplicHAI then imports this module and deletes its internal copy.
 
