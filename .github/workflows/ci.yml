@@ -35,3 +35,9 @@ jobs:
     with:
       runs_on: ubuntu-latest
       test_os: '["ubuntu-latest"]'
+      # golangci-lint's released binaries are built with Go 1.27.0, and they
+      # cannot read the export data a newer 1.27 patch writes for the standard
+      # library, so lint fails on every file. CI runs the toolchain the linter
+      # was built with; a local `make lint` builds the linter with the local
+      # toolchain and needs no such pin.
+      go_version: "1.27.0"
