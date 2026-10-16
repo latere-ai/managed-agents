@@ -46,7 +46,7 @@
       "description": "Meter names a billable quantity that is not a token bucket, such as a container second or a hosted tool call. The set is open because each runtime emits its own, but a meter must be priced before a session using it can settle.",
       "type": "string",
       "x-go-open": true,
-      "oneOf": [
+      "x-go-consts": [
         {
           "const": "charged.cost_usd_micro",
           "title": "MeterChargedCost",

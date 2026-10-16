@@ -118,7 +118,7 @@ func TestSchemaRejectsWhatTheContractForbids(t *testing.T) {
 		{"runtime name with a space", "SessionRef", `{"runtime":"my runtime","id":"s","revision":1,"locator_version":1}`},
 		{"sha256 that is not a digest", "AttachmentResource", `{"path":"a","content":"","sha256":"nope"}`},
 		{"negative token bucket", "Usage", `{"model":{"provider":"p","id":"i"},"input_fresh":-1,"input_cached":0,"cache_write":0,"cache_write_5m":0,"cache_write_1h":0,"output":0}`},
-		{"evaluation with no revisions", "EvaluationSpec", `{"rubric":"r","max_revisions":0}`},
+		{"evaluation with a negative revision budget", "EvaluationSpec", `{"rubric":"r","max_revisions":-1}`},
 		{"unknown property", "Artifact", `{"id":"a","path":"p","extra":1}`},
 	}
 	for _, testCase := range cases {
