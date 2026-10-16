@@ -7,4 +7,4 @@ They are not the user documentation. A person building an application on the por
 | Spec | Status | What it settles |
 |---|---|---|
 | [001](001-the-managed-agent-port.md) — The managed-agent port | built | What the port covers and refuses to cover, the three vendor shapes it is measured against, the rules a schema cannot carry, and the schema-first pipeline. |
-| [002](002-every-runtime-plugs-in.md) — Every runtime plugs in here | designed | Keep this port as the one contract and grow it rather than start again: the additions ReplicHAI made, the corrected grading rule, adapters as nested modules, and the slot for an OpenAI adapter. |
+| [002](002-every-runtime-plugs-in.md) — Every runtime plugs in here | designed | Keep this port as the one contract and grow it rather than start again: the additions ReplicHAI made, the corrected grading rule, adapters as nested modules, and the slot for an OpenAI adapter. ReplicHAI keeps its own copy. |
