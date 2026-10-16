@@ -68,6 +68,13 @@ spec:
 identity:
   role: none
 
+otel_client:
+  # An adapter is a library: which tracing a caller's outbound calls carry is
+  # the caller's choice, and the adapter modules depend on nothing beyond the
+  # contract. Each takes the caller's *http.Client (Config.HTTP), which a
+  # traced application instruments, and falls back to a plain one.
+  skip: [latere]
+
 waive:
   license:
     reason: >-

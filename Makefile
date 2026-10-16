@@ -18,6 +18,12 @@ GATE_PATH := ../..
 
 GOLANGCI_VERSION ?= v2.13.1
 
+# The adapters, each a module of its own so a consumer of the contract never
+# sees a vendor's dependencies. `go test ./...` here stops at a module
+# boundary, so every target that tests, races, covers or lints the contract
+# runs over these as well; CI calls the same targets.
+ADAPTERS := latere
+
 .PHONY: all test test-race test-hermetic cover fmt fmt-check lint lint-config \
         lint-modernize validate deps generated gen-module generate
 
@@ -34,6 +40,7 @@ test:
 	go vet ./...
 	go test ./...
 	go -C internal/gate test ./...
+	@for m in $(ADAPTERS); do go -C $$m vet ./... && go -C $$m test ./... || exit 1; done
 
 # Both modules under the detector. The runtime hands a session to callers that
 # poll it from other goroutines, so a race here is a defect every adapter
@@ -41,6 +48,7 @@ test:
 test-race:
 	go test -race ./...
 	go -C internal/gen test -race ./...
+	@for m in $(ADAPTERS); do go -C $$m test -race ./... || exit 1; done
 
 # The suite with only the Go toolchain on PATH. A test that depends on what
 # happens to be installed passes on a workstation and fails on a runner, which
@@ -55,6 +63,10 @@ test-hermetic:
 cover:
 	go test -coverpkg=./... -coverprofile=coverage.out ./...
 	@$(LATEREGATE) cover $(GATE_ROOT) -profile=$(GATE_PATH)/coverage.out
+	@for m in $(ADAPTERS); do \
+		go -C $$m test -coverprofile=coverage.out ./... && \
+		$(LATEREGATE) cover -C ../../$$m -profile=../../$$m/coverage.out || exit 1; \
+	done
 
 fmt:
 	gofmt -w .
@@ -83,6 +95,9 @@ spec-lint:
 # needs no separately installed binary to be a gate.
 lint: lint-config
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
+	@for m in $(ADAPTERS); do \
+		(cd $$m && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...) || exit 1; \
+	done
 
 # The three promises this repository makes that no shared Go gate knows about.
 # Each keeps its own target, so a failure says which promise broke.

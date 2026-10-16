@@ -17,6 +17,8 @@ committed: the commit log already holds that.
 - `MeterChargedCost`, for the cost a runtime's own platform has already charged, and `DetailVendorCost`, for a vendor's own figure reported beside the caller's price.
 - Conformance cases that hold a runtime to both answers for inputs and findings rounds, and the memory runtime's switches for each.
 - A checklist for adding a runtime, in the adapter guide.
+- `latere.ai/x/managed-agents/latere`, a module of its own: sessions on the Latere platform, paid from the wallet of the person who starts them, on any model the platform offers, graded by a grader subagent. See `docs/latere.md`.
+- `contracttest.Suite.Rejecting`, a runtime whose grader rejects the work, for the case that a rejected session ends failed with the rejecting verdict.
 
 ### Changed
 

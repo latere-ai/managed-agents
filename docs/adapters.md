@@ -2,7 +2,14 @@
 
 For someone putting a vendor behind this port. An adapter implements `managed.Runtime` and passes `contracttest`. Nothing else is required, and nothing else is accepted.
 
-An adapter can live in this repository, as its own Go module beside the contract so that a program importing only the contract never downloads a vendor's SDK, or in a repository of its own. Either way the obligations below are the same.
+An adapter can live in this repository, as its own Go module beside the contract so that a program importing only the contract never downloads a vendor's SDK, or in a repository of its own. Either way the obligations below are the same. The adapters here:
+
+| Module | Runtime |
+|---|---|
+| `latere.ai/x/managed-agents/latere` | The Latere platform. See [the Latere runtime](latere.md). |
+| `latere.ai/x/managed-agents/openai` | Planned, not built. |
+
+An adapter here builds against the contract in the same commit (a `replace` to the parent directory in its `go.mod`), and its module directory goes in `ADAPTERS` in the Makefile, so every gate that tests the contract tests it too.
 
 ## Adding a runtime
 
@@ -174,14 +181,17 @@ func TestConformance(t *testing.T) {
 
 `Run` covers the ungraded and graded lifecycles, that cancelling keeps the evidence readable, that release is idempotent and closes the reads, and that another runtime's reference is refused by all five methods that take one. Where a capability has two answers, the suite checks the one you declared: an input runs and never comes back as an artifact when you declare `InputDir`, and is refused when you do not; a findings file is graded when you declare `FindingsRounds`, and refused when you do not. Cases that need a capability you do not declare are skipped.
 
-To cover resumability, supply a `Restart` — a runtime backed by the same state as a new process would see:
+To cover resumability, supply a `Restart` — a runtime backed by the same state as a new process would see — and, for a runtime that grades, a `Rejecting` runtime whose grader rejects the work:
 
 ```go
 contracttest.Suite{
-    New:     func() managed.Runtime { return myadapter.New(config) },
-    Restart: func(managed.Runtime) managed.Runtime { return myadapter.New(config) },
+    New:       func() managed.Runtime { return myadapter.New(config) },
+    Restart:   func(managed.Runtime) managed.Runtime { return myadapter.New(config) },
+    Rejecting: func() managed.Runtime { return myadapter.New(rejectingConfig) },
 }.Run(t)
 ```
+
+A rejected session must end failed, as an evaluation failure, carrying the rejecting verdict.
 
 The suite then holds you to what you declared: `Resumable: true` must find the session again, and `Resumable: false` must report `ErrNotFound`. **An adapter that declares `Resumable: true` and supplies no `Restart` has not been tested on the claim it makes.**
 

@@ -45,6 +45,13 @@ type Suite struct {
 	// Leaving it nil skips that case. An adapter declaring Resumable true and
 	// supplying no Restart has not been tested on the claim it makes.
 	Restart func(managed.Runtime) managed.Runtime
+	// Rejecting builds a fresh runtime whose grader rejects every attempt. It
+	// is what makes the rejected-evaluation case runnable: a graded session
+	// whose work is rejected must end failed, as an evaluation failure, with
+	// the rejecting verdict. Leaving it nil skips that case; a runtime that
+	// declares Evaluation and supplies no Rejecting has been tested only on
+	// work that passes.
+	Rejecting Factory
 }
 
 // Run is the suite for an adapter with nothing to configure.
@@ -156,6 +163,23 @@ func (s Suite) Run(t *testing.T) {
 		status := pollTerminal(t, runtime, start(t, runtime, spec(true)), managed.GradingRequested)
 		if status.Verdict == nil || !status.Verdict.Grade.Decided() {
 			t.Fatalf("graded terminal status = %+v", status)
+		}
+	})
+
+	t.Run("a rejected evaluation ends failed", func(t *testing.T) {
+		if s.Rejecting == nil {
+			t.Skip("suite supplies no Rejecting runtime")
+		}
+		runtime := s.Rejecting()
+		if !supports(t, runtime).Evaluation {
+			t.Skip("runtime does not grade")
+		}
+		status := pollTerminal(t, runtime, start(t, runtime, spec(true)), managed.GradingRequested)
+		if status.State != managed.StateFailed || status.TerminalReason != managed.ReasonEvaluationFailed {
+			t.Fatalf("a rejected evaluation did not end failed as an evaluation failure: %+v", status)
+		}
+		if status.Verdict == nil || status.Verdict.Grade == managed.GradePassed {
+			t.Fatalf("a rejected evaluation carries no rejecting verdict: %+v", status)
 		}
 	})
 

@@ -50,6 +50,7 @@ It depends on nothing outside the Go standard library, and a test in the reposit
 | `managed` | The `Runtime` interface, the types that cross it, the errors, and the validation. |
 | `managed/contracttest` | The black-box suite an adapter has to pass. One function call in your adapter's test. |
 | `managed/memory` | A deterministic in-process runtime. Develop and test without a vendor account. |
+| `latere.ai/x/managed-agents/latere` | The Latere platform: hosted agent sessions with a sandbox, on any model the platform offers. A module of its own. |
 | `schema/managed.json` | The same contract as JSON Schema. The Go types are generated from it. |
 
 ## The rules
@@ -85,7 +86,7 @@ if !capabilities.Resumable {
 
 **It is not a poll loop.** There is no backoff here, no retry budget, and no rule about when a slow runtime should be given up on. Those are your operational choices, not claims about a vendor, so you write the loop. [docs/using-the-port.md](docs/using-the-port.md) shows one.
 
-**It contains no vendor adapter.** Adapters live in their own repositories. The only implementation here answers in memory and reaches no network.
+**The contract carries no vendor.** Each adapter is a Go module of its own, so importing the contract never brings in a vendor's code or dependencies.
 
 **It does not price anything.** `Usage` reports quantities. Turning quantities into money needs a rate card, which changes on a different clock.
 
@@ -93,5 +94,6 @@ if !capabilities.Resumable {
 
 - [Using the port](docs/using-the-port.md) — driving a session from an application.
 - [Writing an adapter](docs/adapters.md) — the interface, the rules, and the conformance suite.
+- [The Latere runtime](docs/latere.md) — running sessions on the Latere platform.
 - [The wire contract](docs/schema.md) — the JSON Schema, and generating types for another language.
 - [Contributing](CONTRIBUTING.md) — changing this repository.

@@ -25,6 +25,11 @@ func TestRuntimeContract(t *testing.T) {
 		Restart: func(previous managed.Runtime) managed.Runtime {
 			return NewWithStore(previous.(*Runtime).store, config)
 		},
+		Rejecting: func() managed.Runtime {
+			rejecting := config
+			rejecting.Grade = managed.GradeFailed
+			return NewWithStore(nil, rejecting)
+		},
 	}.Run(t)
 }
 
