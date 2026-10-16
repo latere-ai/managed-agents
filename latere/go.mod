@@ -7,6 +7,6 @@ module latere.ai/x/managed-agents/latere
 
 go 1.27.0
 
-require latere.ai/x/managed-agents v0.0.0-20261016013011-16a7b2bd6179
+require latere.ai/x/managed-agents v0.0.0-20261016014632-945e396cfdbf
 
 replace latere.ai/x/managed-agents => ../
