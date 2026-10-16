@@ -97,3 +97,7 @@ if !capabilities.Resumable {
 - [The Latere runtime](docs/latere.md) — running sessions on the Latere platform.
 - [The wire contract](docs/schema.md) — the JSON Schema, and generating types for another language.
 - [Contributing](CONTRIBUTING.md) — changing this repository.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).

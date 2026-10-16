@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Package managed is the provider-neutral contract for running one graded,
 // sandboxed, tool-using model session.
 //

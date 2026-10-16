@@ -75,9 +75,9 @@ otel_client:
   # traced application instruments, and falls back to a plain one.
   skip: [latere]
 
-waive:
-  license:
-    reason: >-
-      no license is chosen yet: the owner picks one when the repository goes
-      public, and every source file then carries its SPDX header
-    until: 2026-11-30
+license:
+  # Apache-2.0, as the family's other public modules (pkg, cella, lux, topos)
+  # are. Every Go file opens with the notice, the generated types included,
+  # and `lateregate license -w` writes it where it is missing.
+  spdx: Apache-2.0
+  holder: Latere AI

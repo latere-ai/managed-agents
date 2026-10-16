@@ -22,6 +22,7 @@ committed: the commit log already holds that.
 
 ### Changed
 
+- The module is licensed under Apache-2.0, and every source file says so.
 - The memory runtime declares allowlist egress, as it declares every other capability the contract defines.
 - `EvaluationSpec.MaxRevisions` may be zero, which grades the first attempt and never revises it. A negative budget is still invalid.
 - A path carrying a NUL byte is refused wherever the specification takes a relative path.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Code generated from managed.json. DO NOT EDIT.
 
 package managed

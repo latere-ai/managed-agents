@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Package memory is the reference runtime for the managed-agent port: a
 // deterministic, in-process implementation that reaches no network.
 //

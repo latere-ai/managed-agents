@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Package contracttest is the black-box suite every runtime adapter has to
 // pass.
 //

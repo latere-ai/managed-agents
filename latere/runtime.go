@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Package latere runs a managed session as a hosted session on the Latere
 // platform: Topos runs the agent and keeps the session, its machine and its
 // model calls, and the person who starts the session pays for it from their

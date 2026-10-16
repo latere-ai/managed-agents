@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 package managed
 
 // The two ordered enums are hand-written rather than generated. State and Grade

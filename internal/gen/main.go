@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Latere AI
+// SPDX-License-Identifier: Apache-2.0
+
 // Command gen writes the Go form of the managed-agent contract from its JSON
 // Schema.
 //
@@ -83,6 +86,11 @@ type generator struct {
 	imports map[string]bool
 }
 
+// notice is the license notice every source file in this repository opens
+// with, the generated one included: it is part of the work, and the license
+// gate reads the first two lines of every Go file.
+const notice = "// SPDX-FileCopyrightText: 2026 Latere AI\n// SPDX-License-Identifier: Apache-2.0\n\n"
+
 func generate(root *jsonschema.Schema, schemaPath string) ([]byte, error) {
 	g := &generator{root: root, imports: map[string]bool{}}
 	order, err := stringList(root.Extra, "x-type-order")
@@ -107,6 +115,7 @@ func generate(root *jsonschema.Schema, schemaPath string) ([]byte, error) {
 		pkg = "main"
 	}
 	var out bytes.Buffer
+	out.WriteString(notice)
 	fmt.Fprintf(&out, "// Code generated from %s. DO NOT EDIT.\n\n", trimDir(schemaPath))
 	fmt.Fprintf(&out, "package %s\n", pkg)
 	if len(g.imports) > 0 {
