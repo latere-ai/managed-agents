@@ -5,7 +5,7 @@ status: designed
 
 # 002 — Every runtime plugs in here
 
-**Status:** designed. The decision below (keep this port and grow it, rather than start again) is taken. Criteria 1 to 4 hold: the contract additions, the zero revision budget, their conformance cases and the adapter guide. The Latere adapter is built; the Anthropic adapter and ReplicHAI's import are not.
+**Status:** designed. The decision below (keep this port and grow it, rather than start again) is taken. Criteria 1 to 4 hold: the contract additions, the zero revision budget, their conformance cases and the adapter guide. The Latere adapter is built. ReplicHAI builds against this module with its copy of the contract deleted, on a branch that is not merged: its CI cannot fetch a private module, so criterion 6 holds once this repository is public. The Anthropic adapter is not moved yet; it still sits in ReplicHAI over that application's older provider protocol, and moving it means retiring that protocol from ReplicHAI's tests as well.
 
 **Scope:** make this module the one contract every managed-session runtime implements, for ReplicHAI first: bring back the three things ReplicHAI added to its own copy after this port was extracted, correct what the port says about grading, ship the Anthropic and Latere adapters here as their own modules, and leave a designed slot for an OpenAI adapter. ReplicHAI then imports this module and deletes its internal copy.
 
