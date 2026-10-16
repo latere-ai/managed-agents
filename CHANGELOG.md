@@ -22,6 +22,7 @@ committed: the commit log already holds that.
 
 ### Changed
 
+- The memory runtime declares allowlist egress, as it declares every other capability the contract defines.
 - `EvaluationSpec.MaxRevisions` may be zero, which grades the first attempt and never revises it. A negative budget is still invalid.
 - A path carrying a NUL byte is refused wherever the specification takes a relative path.
 - The adapter guide's grading rule: a runtime may declare `Evaluation` when it runs the grader itself in a separate context that reads the work and the rubric, not only when the vendor grades.

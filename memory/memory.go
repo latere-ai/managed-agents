@@ -182,7 +182,7 @@ func (r *Runtime) capabilities() managed.Capabilities {
 	return managed.Capabilities{
 		OutputDir:          OutputDir,
 		PackageManagers:    map[string]bool{"pip": true},
-		NetworkModes:       map[managed.NetworkMode]bool{managed.NetworkNone: true, managed.NetworkOpen: true},
+		NetworkModes:       map[managed.NetworkMode]bool{managed.NetworkNone: true, managed.NetworkAllowlist: true, managed.NetworkOpen: true},
 		RepositoryModes:    map[managed.AccessMode]bool{managed.AccessReadOnly: true, managed.AccessReadWrite: true},
 		Evaluation:         !r.config.NoEvaluation,
 		DurableEvents:      true,
