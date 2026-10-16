@@ -252,4 +252,4 @@ The order of work held. The types were written by hand first, the tests were mad
 
 - **A `Controller`.** The poll loop stays in the applications. `docs/using-the-port.md` shows one, as documentation rather than as API.
 - **Streaming.** `Events` is pull-after-the-fact and a pushing runtime buffers. A live stream would be a new optional interface, not a change to this one.
-- **The `latere-ai/ci` token.** The `GOPRIVATE` steps are documented in the README and `CONTRIBUTING.md`, but the shared pipeline has not been given a read token yet. This blocks the first consumer, not this repository.
+- **A read token for a private module.** Not needed: the repository is public since 2026-10-16, so `go get` reaches it through the public proxy and CI runs on GitHub-hosted runners.

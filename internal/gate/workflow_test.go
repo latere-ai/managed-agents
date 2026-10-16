@@ -13,9 +13,12 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// A private repository must route every job, including reusable-workflow
-// jobs, to the org runner. Hosted jobs stop before execution at the budget.
-func TestVerificationRunsWithoutHostedMinutes(t *testing.T) {
+// A public repository runs every job on GitHub-hosted runners: the
+// organization's own runner group refuses a public repository, and a fork's
+// pull request must never run on that shared machine. Every action and
+// reusable workflow is pinned by commit, so a moved tag cannot change what CI
+// runs.
+func TestVerificationRunsOnHostedRunners(t *testing.T) {
 	// Relative to this package's directory, where go test runs it. A path from
 	// runtime.Caller is module-relative when the test is built with -trimpath.
 	for _, name := range []string{"ci.yml"} {
@@ -30,8 +33,7 @@ func TestVerificationRunsWithoutHostedMinutes(t *testing.T) {
 					Uses   string            `yaml:"uses"`
 					With   map[string]string `yaml:"with"`
 					Steps  []struct {
-						Uses string         `yaml:"uses"`
-						With map[string]any `yaml:"with"`
+						Uses string `yaml:"uses"`
 					} `yaml:"steps"`
 				} `yaml:"jobs"`
 			}
@@ -43,31 +45,51 @@ func TestVerificationRunsWithoutHostedMinutes(t *testing.T) {
 			}
 			for id, job := range workflow.Jobs {
 				if job.Uses != "" {
-					if job.With["runs_on"] != "linux-vm" {
-						t.Errorf("%s does not route reusable jobs to linux-vm", id)
+					if !pinned(job.Uses) {
+						t.Errorf("%s uses %q, not pinned by commit", id, job.Uses)
+					}
+					if !hosted(job.With["runs_on"]) {
+						t.Errorf("%s routes reusable jobs to %q, want a GitHub-hosted runner", id, job.With["runs_on"])
 					}
 					var runners []string
-					if err := json.Unmarshal([]byte(job.With["test_os"]), &runners); err != nil || len(runners) != 1 || runners[0] != "linux-vm" {
-						t.Errorf("%s leaves the test matrix on hosted runners", id)
+					if err := json.Unmarshal([]byte(job.With["test_os"]), &runners); err != nil || len(runners) == 0 {
+						t.Errorf("%s has no test matrix: %v", id, err)
+					}
+					for _, runner := range runners {
+						if !hosted(runner) {
+							t.Errorf("%s tests on %q, want a GitHub-hosted runner", id, runner)
+						}
 					}
 					continue
 				}
-				if job.RunsOn != "linux-vm" {
-					t.Errorf("%s runs on %q, want linux-vm", id, job.RunsOn)
+				if !hosted(job.RunsOn) {
+					t.Errorf("%s runs on %q, want a GitHub-hosted runner", id, job.RunsOn)
 				}
-				node := false
 				for _, step := range job.Steps {
-					if strings.HasPrefix(step.Uses, "actions/setup-node@") {
-						node = true
-					}
-					if strings.HasPrefix(step.Uses, "oven-sh/setup-bun@") && !node {
-						t.Errorf("%s needs real Node before Bun on the bare runner", id)
-					}
-					if strings.HasPrefix(step.Uses, "actions/setup-go@") && step.With["cache"] != false {
-						t.Errorf("%s must not restore a hosted Go cache over the persistent cache", id)
+					if step.Uses != "" && !pinned(step.Uses) {
+						t.Errorf("%s uses %q, not pinned by commit", id, step.Uses)
 					}
 				}
 			}
 		})
 	}
+}
+
+// hosted reports whether a runner label is one of GitHub's hosted images.
+func hosted(label string) bool {
+	return strings.HasPrefix(label, "ubuntu-") || strings.HasPrefix(label, "macos-") || strings.HasPrefix(label, "windows-")
+}
+
+// pinned reports whether a uses reference names a full commit.
+func pinned(uses string) bool {
+	_, ref, ok := strings.Cut(uses, "@")
+	if !ok || len(ref) != 40 {
+		return false
+	}
+	for _, c := range ref {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }

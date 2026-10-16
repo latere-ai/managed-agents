@@ -28,7 +28,10 @@ permissions:
 
 jobs:
   verify:
-    uses: latere-ai/ci/.github/workflows/go-verify.yml@321d74d743f3a9573cb8f754dc8bd36638c75f0b # private runner, optional reports and isolated linter locks
+    # GitHub-hosted runners: the repository is public, and the organization's
+    # own runner neither takes a public repository nor should run a fork's
+    # pull request.
+    uses: latere-ai/ci/.github/workflows/go-verify.yml@321d74d743f3a9573cb8f754dc8bd36638c75f0b # optional reports and isolated linter locks
     with:
-      runs_on: linux-vm
-      test_os: '["linux-vm"]'
+      runs_on: ubuntu-latest
+      test_os: '["ubuntu-latest"]'
