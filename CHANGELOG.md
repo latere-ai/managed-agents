@@ -22,6 +22,7 @@ committed: the commit log already holds that.
 
 ### Changed
 
+- **Breaking:** the Latere runtime uses the agents API's subagent names, with no fallback to the old ones. It finds the grader by its `subagent.started` event and the grader's messages by their `subagent` field, and a graded worker's agent sets its limits on subagents as `spec.subagentLimits`. The platform now refuses a manifest that says `spec.threads`, so a build of this module from before this change can no longer start a session there. Agent names come from a digest of the spec, so every agent gets a new name and the first session after upgrading applies a new agent.
 - The module is licensed under Apache-2.0, and every source file says so.
 - The memory runtime declares allowlist egress, as it declares every other capability the contract defines.
 - `EvaluationSpec.MaxRevisions` may be zero, which grades the first attempt and never revises it. A negative budget is still invalid.

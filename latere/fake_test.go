@@ -23,7 +23,7 @@ import (
 // sessions, the account's preferences and Effort levels, the model catalog
 // and Storage. A message runs its turn at once, so a test needs no waiting:
 // a task writes the scripted files and goes idle, a request to grade starts
-// the grader thread, which answers with the next scripted verdict.
+// the grader subagent, which answers with the next scripted verdict.
 type fakePlatform struct {
 	t      *testing.T
 	server *httptest.Server
@@ -171,6 +171,13 @@ func (f *fakePlatform) route(w http.ResponseWriter, r *http.Request) {
 			writeFake(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_manifest"}})
 			return
 		}
+		// The platform refuses a spec that still names its subagent limits
+		// threads. A quote inside a string value is escaped, so the bare key
+		// matches only a key.
+		if strings.Contains(string(manifest), `"threads":`) {
+			writeFake(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_manifest"}})
+			return
+		}
 		versions := f.agents[name]
 		if len(versions) == 0 || string(versions[len(versions)-1]) != string(manifest) {
 			versions = append(versions, manifest)
@@ -295,14 +302,14 @@ func (f *fakePlatform) events(w http.ResponseWriter, r *http.Request, s *fakeSes
 	writeFake(w, http.StatusOK, answer)
 }
 
-func (f *fakePlatform) append(s *fakeSession, kind, thread string, payload any) wireEvent {
+func (f *fakePlatform) append(s *fakeSession, kind, subagent string, payload any) wireEvent {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	event := wireEvent{
 		ID: fmt.Sprintf("evt_%s_%d", s.session.ID, len(s.events)+1), Seq: uint64(len(s.events) + 1),
-		Type: kind, Time: time.Unix(1_700_000_000+int64(len(s.events)), 0).UTC(), Thread: thread, Payload: raw,
+		Type: kind, Time: time.Unix(1_700_000_000+int64(len(s.events)), 0).UTC(), Subagent: subagent, Payload: raw,
 	}
 	s.events = append(s.events, event)
 	s.session.LastSeq = event.Seq
@@ -378,10 +385,10 @@ func (f *fakePlatform) grade(s *fakeSession, message string) {
 		return
 	}
 	f.append(s, "agent.tool_use", "", wireToolUse{ToolUseID: "spawn-1", Name: "spawn"})
-	started := f.append(s, "thread.started", "", wireThreadStarted{Task: task, Tools: tools, Model: "anthropic/claude-sonnet-5.5"})
-	thread := started.ID
-	s.events[len(s.events)-1].Thread = thread
-	var startedPayload wireThreadStarted
+	started := f.append(s, "subagent.started", "", wireSubagentStarted{Task: task, Tools: tools, Model: "anthropic/claude-sonnet-5.5"})
+	subagent := started.ID
+	s.events[len(s.events)-1].Subagent = subagent
+	var startedPayload wireSubagentStarted
 	_ = json.Unmarshal(started.Payload, &startedPayload)
 	startedPayload.Agent.Name = agent
 	raw, _ := json.Marshal(startedPayload)
@@ -389,8 +396,8 @@ func (f *fakePlatform) grade(s *fakeSession, message string) {
 	verdict := f.verdicts[min(f.graded, len(f.verdicts)-1)]
 	f.graded++
 	cost := int64(300)
-	f.append(s, "model.request", thread, wireModelRequest{Model: "anthropic/claude-sonnet-5.5", Outcome: "ok", Cost: &cost, Usage: &wireUsage{InputTokens: 50, OutputTokens: 10}})
-	f.append(s, "agent.message", thread, wireAgentMessage{Message: struct {
+	f.append(s, "model.request", subagent, wireModelRequest{Model: "anthropic/claude-sonnet-5.5", Outcome: "ok", Cost: &cost, Usage: &wireUsage{InputTokens: 50, OutputTokens: 10}})
+	f.append(s, "agent.message", subagent, wireAgentMessage{Message: struct {
 		Blocks []wireBlock `json:"blocks"`
 	}{Blocks: []wireBlock{{Type: "text", Text: verdict}}}})
 	f.append(s, "tool.result", "", wireToolResult{ToolUseID: "spawn-1", Content: []wireBlock{{Type: "text", Text: verdict}}})

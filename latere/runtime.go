@@ -652,7 +652,7 @@ type progress struct {
 func replay(events []wireEvent, loc locator) progress {
 	p := progress{stage: stageWork, since: loc.TaskSeq}
 	for _, event := range events {
-		if event.Seq <= loc.TaskSeq || event.Type != "user.message" || event.Thread != "" {
+		if event.Seq <= loc.TaskSeq || event.Type != "user.message" || event.Subagent != "" {
 			continue
 		}
 		var message wireUserMessage
@@ -742,11 +742,11 @@ func cancelledAt(events []wireEvent, loc locator) time.Time {
 	return last
 }
 
-// idleAfter finds the first time the session's own thread went idle after
-// sequence since, and why.
+// idleAfter finds the first time the session's own conversation went idle
+// after sequence since, and why. Its events carry no subagent.
 func idleAfter(events []wireEvent, since uint64) (string, time.Time, bool) {
 	for _, event := range events {
-		if event.Seq <= since || event.Type != "session.status" || event.Thread != "" {
+		if event.Seq <= since || event.Type != "session.status" || event.Subagent != "" {
 			continue
 		}
 		var status wireStatus
@@ -766,31 +766,31 @@ func (r *Runtime) requestGrade(ctx context.Context, bearer, id string, round, at
 	return outcome{state: managed.StateRunning, sent: true}, nil
 }
 
-// graderVerdict finds the grader thread started after since, checks it is
-// the grader asked for, and reads the verdict from the thread's last
-// message.
+// graderVerdict finds the grader subagent started after since, checks it is
+// the grader asked for, and reads the verdict from the last message of the
+// grader's conversation.
 func graderVerdict(events []wireEvent, since uint64, task string) (managed.Verdict, error) {
-	thread, model := "", managed.ModelRef{}
+	subagent, model := "", managed.ModelRef{}
 	for _, event := range events {
-		if event.Seq <= since || event.Type != "thread.started" {
+		if event.Seq <= since || event.Type != "subagent.started" {
 			continue
 		}
-		var started wireThreadStarted
+		var started wireSubagentStarted
 		if err := json.Unmarshal(event.Payload, &started); err != nil {
 			return managed.Verdict{}, fmt.Errorf("read the grader's start: %w", err)
 		}
 		if err := graderStarted(started, task); err != nil {
 			return managed.Verdict{}, err
 		}
-		thread, model = event.Thread, modelRef(started.Model)
+		subagent, model = event.Subagent, modelRef(started.Model)
 		break
 	}
-	if thread == "" {
+	if subagent == "" {
 		return managed.Verdict{}, errors.New("the worker did not start the grader")
 	}
 	var last *wireEvent
 	for i := range events {
-		if events[i].Seq > since && events[i].Thread == thread && events[i].Type == "agent.message" {
+		if events[i].Seq > since && events[i].Subagent == subagent && events[i].Type == "agent.message" {
 			last = &events[i]
 		}
 	}

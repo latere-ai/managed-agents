@@ -47,13 +47,13 @@ type wireNetwork struct {
 }
 
 type wireEvent struct {
-	ID      string          `json:"id"`
-	Seq     uint64          `json:"seq"`
-	Type    string          `json:"type"`
-	Time    time.Time       `json:"time"`
-	Turn    int             `json:"turn,omitempty"`
-	Thread  string          `json:"thread,omitempty"`
-	Payload json.RawMessage `json:"payload"`
+	ID       string          `json:"id"`
+	Seq      uint64          `json:"seq"`
+	Type     string          `json:"type"`
+	Time     time.Time       `json:"time"`
+	Turn     int             `json:"turn,omitempty"`
+	Subagent string          `json:"subagent,omitempty"`
+	Payload  json.RawMessage `json:"payload"`
 }
 
 type wireBlock struct {
@@ -103,7 +103,7 @@ type wireUsage struct {
 	ReasoningTokens int64  `json:"reasoning_tokens,omitempty"`
 }
 
-type wireThreadStarted struct {
+type wireSubagentStarted struct {
 	Agent struct {
 		Name string `json:"name"`
 	} `json:"agent"`

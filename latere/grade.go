@@ -18,7 +18,7 @@ import (
 const graderName = "grader"
 
 // graderTools are the only tools the grader holds: it reads the work and
-// cannot change it. A grader thread holding any other tool fails the round.
+// cannot change it. A grader holding any other tool fails the round.
 var graderTools = []string{"read", "grep", "glob"}
 
 // graderAttempts is how many times one round may be graded before a grader
@@ -51,15 +51,15 @@ func graderRole(rubric string) string {
 	return graderInstructions + "\n\n--- Rubric ---\n\n" + strings.TrimSpace(rubric)
 }
 
-// roundTask is the task the grader thread is started with. The adapter
-// compares the thread's task with it exactly.
+// roundTask is the task the grader subagent is started with. The adapter
+// compares the started subagent's task with it exactly.
 func roundTask(round int) string {
 	return fmt.Sprintf("Grade round %d of this session's work against your rubric.", round)
 }
 
 // spawnRequest is the message that asks the worker to start the grader. The
 // worker only relays the task; the adapter reads the verdict from the
-// grader's own thread.
+// grader's own conversation.
 func spawnRequest(task string) string {
 	return "Your work is being graded now. Call the spawn tool once, with agent \"" + graderName +
 		"\" and exactly the task between the lines below, nothing added or changed and no tools argument. " +
@@ -140,10 +140,10 @@ func lastVerdictObject(text string) (judgeVerdict, error) {
 	return judgeVerdict{}, errors.New("the grader's last message holds no verdict object")
 }
 
-// graderStarted reports whether a thread's start is the grader the adapter
+// graderStarted reports whether a started subagent is the grader the adapter
 // asked for: the declared subagent, exactly the round's task, and no tool
 // beyond the read-only ones.
-func graderStarted(started wireThreadStarted, task string) error {
+func graderStarted(started wireSubagentStarted, task string) error {
 	if started.Agent.Name != graderName {
 		return fmt.Errorf("the worker started %q instead of the grader", started.Agent.Name)
 	}

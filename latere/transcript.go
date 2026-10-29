@@ -91,8 +91,8 @@ func toolCost(result wireToolResult) *managed.Usage {
 
 // normalize maps the platform's events onto the contract's transcript. Every
 // event keeps its platform id, so a re-read never changes an event's
-// identity, and its payload as raw evidence. Events of the grader's thread
-// are kept and marked by their thread, so a reader can tell the worker's
+// identity, and its payload as raw evidence. Events of the grader subagent
+// are kept and marked as the grader's, so a reader can tell the worker's
 // account from the grader's.
 func normalize(events []wireEvent) []managed.Event {
 	out := make([]managed.Event, 0, len(events))
@@ -129,7 +129,7 @@ func normalize(events []wireEvent) []managed.Event {
 			_ = json.Unmarshal(event.Payload, &failure)
 			normalized.Content = strings.TrimSpace(failure.Code + ": " + failure.Message)
 		}
-		if event.Thread != "" {
+		if event.Subagent != "" {
 			normalized.Tool = strings.TrimSpace(normalized.Tool)
 			if normalized.Content != "" {
 				normalized.Content = "[" + graderName + "] " + normalized.Content

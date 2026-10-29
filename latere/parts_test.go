@@ -74,7 +74,7 @@ func TestTheTranscriptNamesSpeakersAndTheGrader(t *testing.T) {
 		{ID: "e3", Type: "agent.message", Payload: payload(message(wireBlock{Type: "text", Text: "Done."}, wireBlock{Type: "text", Text: " "}))},
 		{ID: "e4", Type: "agent.tool_use", Payload: payload(wireToolUse{Name: "bash", Input: json.RawMessage(`{"command":"ls"}`)})},
 		{ID: "e5", Type: "session.error", Payload: payload(wireSessionError{Code: "model_busy", Message: "busy"})},
-		{ID: "e6", Type: "agent.message", Thread: "t1", Payload: payload(message(wireBlock{Type: "text", Text: "Verdict."}))},
+		{ID: "e6", Type: "agent.message", Subagent: "t1", Payload: payload(message(wireBlock{Type: "text", Text: "Verdict."}))},
 		{ID: "e7", Type: "work.saved", Payload: payload(map[string]int{"covers": 3})},
 	})
 	want := []struct {
@@ -141,6 +141,13 @@ func TestTheWorkerManifestIsNamedByItsContent(t *testing.T) {
 	}
 	if a.Spec.Approvals.Mode != "progressive" || len(a.Spec.Approvals.AlwaysAllow) != len(workerTools) || len(a.Spec.Permissions) == 0 {
 		t.Fatalf("worker approvals and permissions = %+v %+v", a.Spec.Approvals, a.Spec.Permissions)
+	}
+	encoded, err := json.Marshal(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"subagentLimits":{"maxDepth":1,"maxConcurrent":1}`) || strings.Contains(string(encoded), `"threads":`) {
+		t.Fatalf("a graded worker allows one subagent at a time under spec.subagentLimits: %s", encoded)
 	}
 }
 

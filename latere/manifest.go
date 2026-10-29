@@ -26,16 +26,16 @@ type agentMetadata struct {
 }
 
 type agentSpec struct {
-	Model        agentModel          `json:"model"`
-	Instructions string              `json:"instructions"`
-	Tools        []string            `json:"tools"`
-	Subagents    []subagent          `json:"subagents,omitempty"`
-	Permissions  []map[string]string `json:"permissions,omitempty"`
-	Approvals    approvals           `json:"approvals"`
-	Threads      threads             `json:"threads"`
-	Machine      machine             `json:"machine"`
-	Limits       limits              `json:"limits"`
-	Context      struct{}            `json:"context"`
+	Model          agentModel          `json:"model"`
+	Instructions   string              `json:"instructions"`
+	Tools          []string            `json:"tools"`
+	Subagents      []subagent          `json:"subagents,omitempty"`
+	Permissions    []map[string]string `json:"permissions,omitempty"`
+	Approvals      approvals           `json:"approvals"`
+	SubagentLimits subagentLimits      `json:"subagentLimits"`
+	Machine        machine             `json:"machine"`
+	Limits         limits              `json:"limits"`
+	Context        struct{}            `json:"context"`
 }
 
 type agentModel struct {
@@ -52,7 +52,7 @@ type approvals struct {
 	AlwaysAllow []string `json:"alwaysAllow,omitempty"`
 }
 
-type threads struct {
+type subagentLimits struct {
 	MaxDepth      *int `json:"maxDepth,omitempty"`
 	MaxConcurrent *int `json:"maxConcurrent,omitempty"`
 }
@@ -113,7 +113,7 @@ func workerManifest(product Product, instructions, image, model, graderModel, ru
 		Limits:       limits{TurnTimeout: turnTimeout, MaxAge: maxAge},
 	}
 	if graderModel != "" {
-		spec.Threads = threads{MaxDepth: &one, MaxConcurrent: &one}
+		spec.SubagentLimits = subagentLimits{MaxDepth: &one, MaxConcurrent: &one}
 		spec.Subagents = []subagent{{Name: graderName, Spec: agentSpec{
 			Model:        agentModel{Name: graderModel},
 			Instructions: graderRole(rubric),
