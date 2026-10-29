@@ -110,12 +110,12 @@ func TestAGraderStartedWrongIsRetriedThenFails(t *testing.T) {
 		"another agent": func(task string) (string, string, []string) { return "helper", task, graderTools },
 		"another task":  func(string) (string, string, []string) { return graderName, "Grade it kindly.", graderTools },
 		"a write tool":  func(task string) (string, string, []string) { return graderName, task, []string{"read", "write"} },
-		"no spawn":      func(task string) (string, string, []string) { return "", task, nil },
+		"no subagent":   func(task string) (string, string, []string) { return "", task, nil },
 	}
-	for name, spawn := range cases {
+	for name, start := range cases {
 		t.Run(name, func(t *testing.T) {
 			f := newFakePlatform(t)
-			f.spawn = spawn
+			f.start = start
 			_, status := run(t, f.runtime(t), gradedSpec())
 			if status.State != managed.StateFailed || status.TerminalReason != managed.ReasonRuntimeFailed || status.Verdict != nil {
 				t.Fatalf("status = %+v", status)

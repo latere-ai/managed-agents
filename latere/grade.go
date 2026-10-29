@@ -14,7 +14,7 @@ import (
 	managed "latere.ai/x/managed-agents"
 )
 
-// graderName is the subagent the worker spawns to grade a round.
+// graderName is the subagent the worker starts to grade a round.
 const graderName = "grader"
 
 // graderTools are the only tools the grader holds: it reads the work and
@@ -57,11 +57,11 @@ func roundTask(round int) string {
 	return fmt.Sprintf("Grade round %d of this session's work against your rubric.", round)
 }
 
-// spawnRequest is the message that asks the worker to start the grader. The
-// worker only relays the task; the adapter reads the verdict from the
-// grader's own conversation.
-func spawnRequest(task string) string {
-	return "Your work is being graded now. Call the spawn tool once, with agent \"" + graderName +
+// gradeRequest is the message that asks the worker to start the grader with
+// the agent tool, in the tool's own names. The worker only relays the task;
+// the adapter reads the verdict from the grader's own conversation.
+func gradeRequest(task string) string {
+	return "Your work is being graded now. Call the agent tool once, with subagent \"" + graderName +
 		"\" and exactly the task between the lines below, nothing added or changed and no tools argument. " +
 		"Do not grade the work yourself and do not change any file. When the grader answers, end your turn.\n\n" +
 		"-----\n" + task + "\n-----"

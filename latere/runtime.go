@@ -661,7 +661,7 @@ func replay(events []wireEvent, loc locator) progress {
 		}
 		body := text(message.Content)
 		switch {
-		case body == spawnRequest(roundTask(p.round)):
+		case body == gradeRequest(roundTask(p.round)):
 			if p.stage == stageGrade {
 				p.attempt++
 			} else {
@@ -757,10 +757,10 @@ func idleAfter(events []wireEvent, since uint64) (string, time.Time, bool) {
 	return "", time.Time{}, false
 }
 
-// requestGrade asks the worker to spawn the grader for a round.
+// requestGrade asks the worker to start the grader for a round.
 func (r *Runtime) requestGrade(ctx context.Context, bearer, id string, round, attempt int) (outcome, error) {
 	key := fmt.Sprintf("%s-grade-%d-%d", id, round, attempt)
-	if _, err := r.platform.message(ctx, bearer, id, spawnRequest(roundTask(round)), nil, key); err != nil {
+	if _, err := r.platform.message(ctx, bearer, id, gradeRequest(roundTask(round)), nil, key); err != nil {
 		return outcome{}, fmt.Errorf("ask for round %d's grade: %w", round, err)
 	}
 	return outcome{state: managed.StateRunning, sent: true}, nil

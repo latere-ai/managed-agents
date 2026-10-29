@@ -44,8 +44,10 @@ type fakePlatform struct {
 	hold bool
 	// stop is the stop reason a worker turn ends with.
 	stop string
-	// spawn edits the task the worker spawns the grader with.
-	spawn func(task string) (agent, sent string, tools []string)
+	// start edits how the worker starts the grader: the subagent, the task
+	// and the tools. An empty subagent is a worker that grades the work
+	// itself.
+	start func(task string) (subagent, sent string, tools []string)
 	// fail answers the next request to a path prefix with a status, once.
 	fail map[string]int
 	// requests counts requests by method and path prefix.
@@ -342,7 +344,7 @@ func (f *fakePlatform) send(w http.ResponseWriter, r *http.Request, s *fakeSessi
 		return
 	}
 	message := text(body.Payload.Content)
-	if strings.Contains(message, "Call the spawn tool") {
+	if strings.Contains(message, `Call the agent tool once, with subagent "`+graderName+`"`) {
 		f.grade(s, message)
 	} else {
 		f.work(s)
@@ -374,23 +376,23 @@ func (f *fakePlatform) work(s *fakeSession) {
 func (f *fakePlatform) grade(s *fakeSession, message string) {
 	_, after, _ := strings.Cut(message, "-----\n")
 	task, _, _ := strings.Cut(after, "\n-----")
-	agent, tools := graderName, append([]string(nil), graderTools...)
-	if f.spawn != nil {
-		agent, task, tools = f.spawn(task)
+	name, tools := graderName, append([]string(nil), graderTools...)
+	if f.start != nil {
+		name, task, tools = f.start(task)
 	}
-	if agent == "" {
+	if name == "" {
 		f.append(s, "agent.message", "", wireAgentMessage{Message: struct {
 			Blocks []wireBlock `json:"blocks"`
 		}{Blocks: []wireBlock{{Type: "text", Text: `I graded it myself: {"grade": "passed", "explanation": "x", "criteria": [{"id": 1, "name": "x", "passed": true, "evidence": "x"}]}`}}}})
 		return
 	}
-	f.append(s, "agent.tool_use", "", wireToolUse{ToolUseID: "spawn-1", Name: "spawn"})
+	f.append(s, "agent.tool_use", "", wireToolUse{ToolUseID: "agent-1", Name: "agent"})
 	started := f.append(s, "subagent.started", "", wireSubagentStarted{Task: task, Tools: tools, Model: "anthropic/claude-sonnet-5.5"})
 	subagent := started.ID
 	s.events[len(s.events)-1].Subagent = subagent
 	var startedPayload wireSubagentStarted
 	_ = json.Unmarshal(started.Payload, &startedPayload)
-	startedPayload.Agent.Name = agent
+	startedPayload.Agent.Name = name
 	raw, _ := json.Marshal(startedPayload)
 	s.events[len(s.events)-1].Payload = raw
 	verdict := f.verdicts[min(f.graded, len(f.verdicts)-1)]
@@ -400,7 +402,7 @@ func (f *fakePlatform) grade(s *fakeSession, message string) {
 	f.append(s, "agent.message", subagent, wireAgentMessage{Message: struct {
 		Blocks []wireBlock `json:"blocks"`
 	}{Blocks: []wireBlock{{Type: "text", Text: verdict}}}})
-	f.append(s, "tool.result", "", wireToolResult{ToolUseID: "spawn-1", Content: []wireBlock{{Type: "text", Text: verdict}}})
+	f.append(s, "tool.result", "", wireToolResult{ToolUseID: "agent-1", Content: []wireBlock{{Type: "text", Text: verdict}}})
 }
 
 func (f *fakePlatform) storage(w http.ResponseWriter, r *http.Request) {

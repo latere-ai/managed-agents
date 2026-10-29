@@ -308,7 +308,7 @@ func TestATurnThatNeverStopsIsReportedNotDeleted(t *testing.T) {
 	f.sessions[ref.ID].session.Status = "running"
 	f.mu.Unlock()
 	interrupts := 0
-	f.spawn = nil
+	f.start = nil
 	r.sleep = func(context.Context, time.Duration) error {
 		f.mu.Lock()
 		f.sessions[ref.ID].session.Status = "running"
