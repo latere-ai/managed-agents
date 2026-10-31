@@ -3,6 +3,6 @@
 // reach every consumer's module graph for a program none of them run.
 module latere.ai/x/managed-agents/internal/gen
 
-go 1.27.0
+go 1.27.3
 
 require github.com/google/jsonschema-go v0.4.3

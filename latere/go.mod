@@ -5,7 +5,7 @@
 // the contract version required here or a newer one.
 module latere.ai/x/managed-agents/latere
 
-go 1.27.0
+go 1.27.3
 
 require latere.ai/x/managed-agents v0.0.0-20261016014632-945e396cfdbf
 
