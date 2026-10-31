@@ -40,4 +40,4 @@ jobs:
       # library, so lint fails on every file. CI runs the toolchain the linter
       # was built with; a local `make lint` builds the linter with the local
       # toolchain and needs no such pin.
-      go_version: "1.27.3"
+      go_version: "1.27.0"

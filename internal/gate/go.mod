@@ -8,7 +8,7 @@
 // their dependencies outside the port's module graph.
 module latere.ai/x/managed-agents/internal/gate
 
-go 1.27.3
+go 1.27.0
 
 tool latere.ai/x/ci-gate/cmd/lateregate
 
