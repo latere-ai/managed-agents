@@ -31,7 +31,7 @@ jobs:
     # GitHub-hosted runners: the repository is public, and the organization's
     # own runner neither takes a public repository nor should run a fork's
     # pull request.
-    uses: latere-ai/ci/.github/workflows/lateregate.yml@v1
+    uses: latere-ai/ci/.github/workflows/lateregate.yml@52e1a31e5bdccaed196686717b5a600212eba8a2
     with:
       runs_on: ubuntu-latest
       gate_module: internal/gate
