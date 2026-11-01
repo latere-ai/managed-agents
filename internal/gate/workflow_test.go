@@ -51,9 +51,12 @@ func TestVerificationRunsOnHostedRunners(t *testing.T) {
 					if !hosted(job.With["runs_on"]) {
 						t.Errorf("%s routes reusable jobs to %q, want a GitHub-hosted runner", id, job.With["runs_on"])
 					}
+					// An empty test_os tests on runs_on, checked above.
 					var runners []string
-					if err := json.Unmarshal([]byte(job.With["test_os"]), &runners); err != nil || len(runners) == 0 {
-						t.Errorf("%s has no test matrix: %v", id, err)
+					if raw := job.With["test_os"]; raw != "" {
+						if err := json.Unmarshal([]byte(raw), &runners); err != nil {
+							t.Errorf("%s test_os %q does not parse: %v", id, raw, err)
+						}
 					}
 					for _, runner := range runners {
 						if !hosted(runner) {

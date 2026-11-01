@@ -1,9 +1,9 @@
 # The per-push gates for the managed-agent port.
 #
-# Every gate here is a make target, because the shared pipeline in latere-ai/ci
-# probes this file and runs what it finds rather than carrying commands of its
-# own. That is what makes each of them runnable on a workstation: a gate that
-# only runs on a runner tells you too late.
+# Every gate here is a make target, so each runs on a workstation the way CI
+# runs it: a gate that only runs on a runner tells you too late. CI runs the
+# shared gate, latere-ai/ci's lateregate.yml, over the root module, and
+# `make modules` beside it for what that gate does not reach.
 #
 # The gates themselves come from latere.ai/x/ci-gate, pinned in
 # internal/gate/go.mod rather than in the root go.mod. The port promises that
@@ -21,20 +21,18 @@ GOLANGCI_VERSION ?= v2.13.1
 # The adapters, each a module of its own so a consumer of the contract never
 # sees a vendor's dependencies. `go test ./...` here stops at a module
 # boundary, so every target that tests, races, covers or lints the contract
-# runs over these as well; CI calls the same targets.
+# runs over these as well, and so does `make modules`, which CI runs.
 ADAPTERS := latere
 
 .PHONY: all test test-race test-hermetic cover fmt fmt-check lint lint-config \
-        lint-modernize validate deps generated gen-module generate
+        lint-modernize validate deps generated gen-module generate modules
 
 # A bare make runs every gate. Nothing here needs a network beyond the module
 # cache, a container engine, or a credential.
 all: fmt-check lint-modernize test test-hermetic cover validate lint
 
-# go vet and then the suite, without the race detector. The shared pipeline
-# runs this target on both runners in its matrix and runs test-race as a job of
-# its own, so the fast signal and the expensive one are not the same wait. The
-# target never depends on lint: a failing lint that hides a failing test costs
+# go vet and then the suite, without the race detector, so the fast signal and
+# the expensive one are not the same wait. The target never depends on lint: a failing lint that hides a failing test costs
 # a second push to learn the second fact.
 test:
 	go vet ./...
@@ -99,6 +97,22 @@ lint: lint-config
 		(cd $$m && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...) || exit 1; \
 	done
 
+# What the shared gate does not reach, which CI runs beside it: the shared gate
+# checks the root module, and the gate module, the generator and each adapter
+# are modules of their own. Each adapter is vetted, raced, held to the coverage
+# floor and linted, as the root is.
+modules: validate lint-config
+	go -C internal/gate test ./...
+	go -C internal/gen test -race ./...
+	@for m in $(ADAPTERS); do \
+		go -C $$m vet ./... && \
+		go -C $$m test -race -coverprofile=coverage.out ./... && \
+		$(LATEREGATE) cover -C ../../$$m -profile=../../$$m/coverage.out || exit 1; \
+	done
+	@for m in $(ADAPTERS); do \
+		(cd $$m && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...) || exit 1; \
+	done
+
 # The three promises this repository makes that no shared Go gate knows about.
 # Each keeps its own target, so a failure says which promise broke.
 validate: deps generated gen-module
@@ -123,7 +137,7 @@ generated:
 	git diff --exit-code -- types.gen.go
 
 # The generator is a module of its own, so `go vet ./...` at the root never
-# reaches it and neither does the shared pipeline's test job.
+# reaches it and neither does the shared gate, which checks the root module.
 gen-module:
 	go -C internal/gen vet ./...
 	go -C internal/gen test ./...
