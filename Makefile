@@ -1,9 +1,10 @@
 # The per-push gates for the managed-agent port.
 #
-# Every gate here is a make target, because the shared pipeline in latere-ai/ci
-# probes this file and runs what it finds rather than carrying commands of its
-# own. That is what makes each of them runnable on a workstation: a gate that
-# only runs on a runner tells you too late.
+# Every gate runs on a workstation the way CI runs it: a gate that only runs on
+# a runner tells you too late. CI runs the shared gate, latere-ai/ci's
+# lateregate.yml, over the root module from internal/gate, and `make modules`
+# beside it for what that gate does not reach. A target named for a gate
+# delegates to lateregate, then covers the other modules.
 #
 # The gates themselves come from latere.ai/x/ci-gate, pinned in
 # internal/gate/go.mod rather than in the root go.mod. The port promises that
@@ -21,7 +22,7 @@ GOLANGCI_VERSION ?= v2.13.1
 # The adapters, each a module of its own so a consumer of the contract never
 # sees a vendor's dependencies. `go test ./...` here stops at a module
 # boundary, so every target that tests, races, covers or lints the contract
-# runs over these as well; CI calls the same targets.
+# runs over these as well, and so does `make modules`, which CI runs.
 ADAPTERS := latere
 
 .PHONY: all test test-race test-hermetic cover fmt fmt-check lint lint-config \
@@ -35,8 +36,7 @@ all: fmt-check lint-modernize test test-hermetic cover validate lint
 # the expensive one are not the same wait. The target never depends on lint: a failing lint that hides a failing test costs
 # a second push to learn the second fact.
 test:
-	go vet ./...
-	go test ./...
+	@$(LATEREGATE) test $(GATE_ROOT)
 	go -C internal/gate test ./...
 	@for m in $(ADAPTERS); do go -C $$m vet ./... && go -C $$m test ./... || exit 1; done
 
@@ -44,7 +44,7 @@ test:
 # poll it from other goroutines, so a race here is a defect every adapter
 # inherits.
 test-race:
-	go test -race ./...
+	@$(LATEREGATE) race $(GATE_ROOT)
 	go -C internal/gen test -race ./...
 	@for m in $(ADAPTERS); do go -C $$m test -race ./... || exit 1; done
 
@@ -92,7 +92,7 @@ spec-lint:
 # published after this file was reviewed, and `go run` fetches it, so the gate
 # needs no separately installed binary to be a gate.
 lint: lint-config
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
+	@$(LATEREGATE) lint $(GATE_ROOT)
 	@for m in $(ADAPTERS); do \
 		(cd $$m && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...) || exit 1; \
 	done

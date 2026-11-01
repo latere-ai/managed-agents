@@ -8,11 +8,7 @@
 # it and points it back at this directory.
 
 cover:
-  # Ninety, per package rather than as a repository average: an average lets a
-  # well-tested package carry an untested one and reports a number nobody can
-  # act on. CONTRIBUTING states the same figure, and until now nothing checked
-  # it.
-  threshold: 90.0
+  # The default floor, ninety per package, is the figure CONTRIBUTING states.
   trim_prefix: latere.ai/x/managed-agents/
   exempt:
     # One entry, and the value is the reason; lateregate rejects an empty one.
@@ -34,26 +30,12 @@ hermetic:
   # empty list is what keeps that true.
   allow: []
 
-modernize:
-  # newexpr rewrites pointer helpers to new(v) and inlines call sites unevenly,
-  # leaving the helper with no callers and an untyped constant argument at the
-  # wrong default type. errorsastype rewrites errors.As to errors.AsType[T],
-  # whose type parameter is constrained to [E error], which a local non-error
-  # interface target does not satisfy, so the rewrite does not compile.
-  #
-  # lateregate checks each name still exists, because `go fix` rejects an
-  # unknown -name=false and the gate would then pass silently.
-  disable: [newexpr, errorsastype]
-
 spec:
   # Every spec is numbered, appears in the index with the status it claims, and
   # every wikilink resolves. The status lived in prose before this gate, which
   # meant the index and the document could disagree with nobody noticing.
-  dir: specs
-  index: specs/README.md
   numbered: true
   wikilinks: true
-  require: [title, status]
   # This tree's own words: `designed` for a decision taken whose work is not
   # finished, `built` once its acceptance criteria hold. The vocabulary is
   # closed so a typo becomes a failure rather than a new state nobody defined.

@@ -1,0 +1,8 @@
+#!/bin/sh
+# pre-commit: the staged Go files are gofmt-formatted, group their imports
+# the way the linter wants, carry the license notice, build no outbound HTTP
+# client without a trace, and hold no code the standard library already
+# covers. The checks live in lateregate, pinned in internal/gate; this file
+# only calls it, pointed back at the repository root.
+# Install with: git config core.hooksPath .githooks
+exec go -C internal/gate tool lateregate hook -C ../..
