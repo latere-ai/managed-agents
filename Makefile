@@ -1,9 +1,9 @@
 # The per-push gates for the managed-agent port.
 #
-# Every gate here is a make target, so each runs on a workstation the way CI
-# runs it: a gate that only runs on a runner tells you too late. CI runs the
-# shared gate, latere-ai/ci's lateregate.yml, over the root module, and
-# `make modules` beside it for what that gate does not reach.
+# Every gate here is a make target, because the shared pipeline in latere-ai/ci
+# probes this file and runs what it finds rather than carrying commands of its
+# own. That is what makes each of them runnable on a workstation: a gate that
+# only runs on a runner tells you too late.
 #
 # The gates themselves come from latere.ai/x/ci-gate, pinned in
 # internal/gate/go.mod rather than in the root go.mod. The port promises that
@@ -21,7 +21,7 @@ GOLANGCI_VERSION ?= v2.13.1
 # The adapters, each a module of its own so a consumer of the contract never
 # sees a vendor's dependencies. `go test ./...` here stops at a module
 # boundary, so every target that tests, races, covers or lints the contract
-# runs over these as well, and so does `make modules`, which CI runs.
+# runs over these as well; CI calls the same targets.
 ADAPTERS := latere
 
 .PHONY: all test test-race test-hermetic cover fmt fmt-check lint lint-config \
@@ -97,9 +97,8 @@ lint: lint-config
 		(cd $$m && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...) || exit 1; \
 	done
 
-# What the shared gate does not reach, which CI runs beside it: the shared gate
-# checks the root module, and the gate module, the generator and each adapter
-# are modules of their own. Each adapter is vetted, raced, held to the coverage
+# What a gate over the root module does not reach: the gate module, the
+# generator and each adapter are modules of their own. Each adapter is vetted, raced, held to the coverage
 # floor and linted, as the root is.
 modules: validate lint-config
 	go -C internal/gate test ./...
