@@ -11,7 +11,7 @@ package managed
 // is generated from the schema.
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 )
 

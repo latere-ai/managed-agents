@@ -7,7 +7,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"net"
 	"net/url"
@@ -271,7 +272,9 @@ func (r SessionRef) Validate(maxBytes int) error {
 		return nil
 	}
 	var value any
-	if err := json.Unmarshal(r.Locator, &value); err != nil {
+	// A locator is written by a runtime, so it is read as leniently as it was
+	// before: a repeated member name or invalid UTF-8 does not make it invalid.
+	if err := json.Unmarshal(r.Locator, &value, jsontext.AllowDuplicateNames(true), jsontext.AllowInvalidUTF8(true)); err != nil {
 		return invalid("ref.locator", "must be valid JSON")
 	}
 	if secretKey(value) {

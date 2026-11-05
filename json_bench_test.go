@@ -4,7 +4,8 @@
 package managed
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,7 +82,7 @@ func BenchmarkJSONSessionRefValidate(b *testing.B) {
 	if err := json.Unmarshal(body, &ref); err != nil {
 		b.Fatal(err)
 	}
-	ref.Locator = json.RawMessage(`{"agent":"review-3f9a1c7e5b2d4a60","model":"claude-sonnet-5-5","graded":true,"max_revisions":2,"task_seq":41,"started":"2026-08-24T09:00:00Z"}`)
+	ref.Locator = jsontext.Value(`{"agent":"review-3f9a1c7e5b2d4a60","model":"claude-sonnet-5-5","graded":true,"max_revisions":2,"task_seq":41,"started":"2026-08-24T09:00:00Z"}`)
 	b.ReportAllocs()
 	b.SetBytes(int64(len(ref.Locator)))
 	for b.Loop() {

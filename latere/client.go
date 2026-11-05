@@ -6,7 +6,7 @@ package latere
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -61,7 +61,7 @@ func (c *client) call(ctx context.Context, bearer, method, path string, body any
 	if out == nil || len(raw) == 0 {
 		return nil
 	}
-	if err := json.Unmarshal(raw, out); err != nil {
+	if err := json.Unmarshal(raw, out, foreignJSON); err != nil {
 		return fmt.Errorf("decode %s %s: %w", method, redactPath(path), err)
 	}
 	return nil
@@ -71,7 +71,7 @@ func (c *client) call(ctx context.Context, bearer, method, path string, body any
 func (c *client) send(ctx context.Context, bearer, method, path string, body any, idempotencyKey string) ([]byte, error) {
 	var reader io.Reader
 	if body != nil {
-		encoded, err := json.Marshal(body)
+		encoded, err := json.Marshal(body, sentJSON)
 		if err != nil {
 			return nil, fmt.Errorf("encode %s %s: %w", method, redactPath(path), err)
 		}
@@ -114,7 +114,7 @@ func (c *client) send(ctx context.Context, bearer, method, path string, body any
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	if json.Unmarshal(raw, &envelope) == nil {
+	if json.Unmarshal(raw, &envelope, foreignJSON) == nil {
 		failure.Code, failure.Message = envelope.Error.Code, envelope.Error.Message
 	}
 	switch {

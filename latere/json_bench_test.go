@@ -6,7 +6,8 @@ package latere
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,7 +39,7 @@ func benchPlatform(body []byte) platform {
 	return platform{client: &client{base: "https://platform.invalid", http: &http.Client{Transport: cannedTransport{body: body}}}}
 }
 
-func benchRaw(b *testing.B, v any) json.RawMessage {
+func benchRaw(b *testing.B, v any) jsontext.Value {
 	b.Helper()
 	raw, err := json.Marshal(v)
 	if err != nil {
@@ -68,7 +69,7 @@ func benchEvents(b *testing.B, count, resultBytes int) []wireEvent {
 		add("model.request", wireModelRequest{Model: "claude-sonnet-5-5", Outcome: "ok", Cost: &cost,
 			Usage: &wireUsage{InputTokens: 1840, OutputTokens: 412, CacheRead: &cached}})
 		add("agent.tool_use", wireToolUse{ToolUseID: fmt.Sprintf("toolu_%016d", len(events)), Name: "bash",
-			Input: json.RawMessage(`{"command":"go test ./internal/... 2>&1 | tail -n 80","timeout":120}`)})
+			Input: jsontext.Value(`{"command":"go test ./internal/... 2>&1 | tail -n 80","timeout":120}`)})
 		add("tool.result", wireToolResult{ToolUseID: fmt.Sprintf("toolu_%016d", len(events)-1), Content: []wireBlock{{Type: "text", Text: output}}})
 		add("agent.message", wireAgentMessage{StopReason: "end_turn", Message: struct {
 			Blocks []wireBlock `json:"blocks"`

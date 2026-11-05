@@ -4,8 +4,8 @@
 package latere
 
 import (
-	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"slices"
@@ -131,9 +131,9 @@ func parseVerdict(message string, model managed.ModelRef) (managed.Verdict, erro
 // before it; anything after it is ignored.
 func lastVerdictObject(text string) (judgeVerdict, error) {
 	for i := strings.LastIndexByte(text, '{'); i >= 0; i = strings.LastIndexByte(text[:i], '{') {
-		decoder := json.NewDecoder(bytes.NewReader([]byte(text[i:])))
+		decoder := jsontext.NewDecoder(strings.NewReader(text[i:]), foreignJSON)
 		var candidate judgeVerdict
-		if decoder.Decode(&candidate) == nil && candidate.Grade != "" {
+		if json.UnmarshalDecode(decoder, &candidate, foreignJSON) == nil && candidate.Grade != "" {
 			return candidate, nil
 		}
 	}

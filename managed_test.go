@@ -7,7 +7,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"strings"
 	"testing"
@@ -167,7 +168,7 @@ func TestDuplicateResourceDestination(t *testing.T) {
 }
 
 func TestSessionRefValidationAndRoundTrip(t *testing.T) {
-	ref := SessionRef{Runtime: "anthropic-managed", ID: "session-1", Revision: 2, LocatorVersion: 1, Locator: json.RawMessage(`{"session_id":"s","upload_ids":["f"]}`)}
+	ref := SessionRef{Runtime: "anthropic-managed", ID: "session-1", Revision: 2, LocatorVersion: 1, Locator: jsontext.Value(`{"session_id":"s","upload_ids":["f"]}`)}
 	if err := ref.Validate(0); err != nil {
 		t.Fatalf("valid ref: %v", err)
 	}
@@ -188,8 +189,8 @@ func TestSessionRefValidationAndRoundTrip(t *testing.T) {
 		{Runtime: "anthropic", ID: "", Revision: 1, LocatorVersion: 1},
 		{Runtime: "anthropic", ID: "s", Revision: 0, LocatorVersion: 1},
 		{Runtime: "anthropic", ID: "s", Revision: 1, LocatorVersion: 0},
-		{Runtime: "anthropic", ID: "s", Revision: 1, LocatorVersion: 1, Locator: json.RawMessage(`{`)},
-		{Runtime: "anthropic", ID: "s", Revision: 1, LocatorVersion: 1, Locator: json.RawMessage(`{"api_token":"nope"}`)},
+		{Runtime: "anthropic", ID: "s", Revision: 1, LocatorVersion: 1, Locator: jsontext.Value(`{`)},
+		{Runtime: "anthropic", ID: "s", Revision: 1, LocatorVersion: 1, Locator: jsontext.Value(`{"api_token":"nope"}`)},
 	}
 	for _, bad := range tests {
 		if err := bad.Validate(0); !errors.Is(err, ErrInvalidSpec) {
@@ -197,7 +198,7 @@ func TestSessionRefValidationAndRoundTrip(t *testing.T) {
 		}
 	}
 	tooLarge := ref
-	tooLarge.Locator = json.RawMessage(`{"value":"` + strings.Repeat("x", 20) + `"}`)
+	tooLarge.Locator = jsontext.Value(`{"value":"` + strings.Repeat("x", 20) + `"}`)
 	if err := tooLarge.Validate(10); !errors.Is(err, ErrInvalidSpec) {
 		t.Fatalf("oversized locator = %v", err)
 	}

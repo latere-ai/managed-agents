@@ -6,7 +6,7 @@
 package managed
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"time"
 )
 
@@ -170,7 +170,7 @@ type ModelRef struct {
 // never depends on the tier being re-resolved later.
 type ModelSelector struct {
 	Preference string    `json:"preference,omitempty"`
-	Exact      *ModelRef `json:"exact,omitempty"`
+	Exact      *ModelRef `json:"exact,omitzero"`
 }
 
 // Model is one model a runtime offers, with the preference tiers it can serve.
@@ -265,9 +265,9 @@ type RepositoryResource struct {
 // an input the caller asked for.
 type Resource struct {
 	Kind       ResourceKind        `json:"kind"`
-	Attachment *AttachmentResource `json:"attachment,omitempty"`
-	Repository *RepositoryResource `json:"repository,omitempty"`
-	Input      *InputResource      `json:"input,omitempty"`
+	Attachment *AttachmentResource `json:"attachment,omitzero"`
+	Repository *RepositoryResource `json:"repository,omitzero"`
+	Input      *InputResource      `json:"input,omitzero"`
 }
 
 // EvaluationSpec makes a session graded. An absent EvaluationSpec on
@@ -299,7 +299,7 @@ type SessionSpec struct {
 	Task         string          `json:"task"`
 	Sandbox      SandboxSpec     `json:"sandbox"`
 	Resources    []Resource      `json:"resources,omitempty"`
-	Evaluation   *EvaluationSpec `json:"evaluation,omitempty"`
+	Evaluation   *EvaluationSpec `json:"evaluation,omitzero"`
 }
 
 // SessionRef is the handle to a session: everything needed to poll it, read its
@@ -319,11 +319,11 @@ type SessionSpec struct {
 // byte for byte but never parses; LocatorVersion versions its shape, and it is
 // size-limited and forbidden from carrying credentials or user content.
 type SessionRef struct {
-	Runtime        RuntimeName     `json:"runtime"`
-	ID             string          `json:"id"`
-	Revision       uint64          `json:"revision"`
-	LocatorVersion int             `json:"locator_version"`
-	Locator        json.RawMessage `json:"locator,omitempty"`
+	Runtime        RuntimeName    `json:"runtime"`
+	ID             string         `json:"id"`
+	Revision       uint64         `json:"revision"`
+	LocatorVersion int            `json:"locator_version"`
+	Locator        jsontext.Value `json:"locator,omitzero"`
 }
 
 // Verdict is the evaluator's decision about a graded session. Explanation is
@@ -389,7 +389,7 @@ type Status struct {
 	Usage          Usage          `json:"usage"`
 	TerminalReason TerminalReason `json:"terminal_reason,omitempty"`
 	Error          string         `json:"error,omitempty"`
-	Verdict        *Verdict       `json:"verdict,omitempty"`
+	Verdict        *Verdict       `json:"verdict,omitzero"`
 }
 
 // Event is one entry in a session's transcript, normalized across runtimes. ID
@@ -398,14 +398,14 @@ type Status struct {
 // intact, because the transcript is the evidence for a run and must not be
 // reduced to this contract's vocabulary.
 type Event struct {
-	ID      string          `json:"id"`
-	Role    Role            `json:"role"`
-	Kind    EventKind       `json:"kind"`
-	Tool    string          `json:"tool,omitempty"`
-	Content string          `json:"content,omitempty"`
-	Time    time.Time       `json:"time"`
-	Usage   *Usage          `json:"usage,omitempty"`
-	Raw     json.RawMessage `json:"raw,omitempty"`
+	ID      string         `json:"id"`
+	Role    Role           `json:"role"`
+	Kind    EventKind      `json:"kind"`
+	Tool    string         `json:"tool,omitempty"`
+	Content string         `json:"content,omitempty"`
+	Time    time.Time      `json:"time"`
+	Usage   *Usage         `json:"usage,omitzero"`
+	Raw     jsontext.Value `json:"raw,omitzero"`
 }
 
 // Artifact is one file the session produced. Path is a clean, relative,
@@ -443,19 +443,19 @@ type Capabilities struct {
 	// Evaluation reports whether this runtime can grade a session against a
 	// rubric. When false, a specification carrying an EvaluationSpec is refused:
 	// grading is not something a caller can bolt on afterwards from a transcript.
-	Evaluation bool `json:"evaluation,omitempty"`
+	Evaluation bool `json:"evaluation,omitzero"`
 	// DurableEvents reports whether the transcript is stored by the runtime rather
 	// than buffered in this process. When false the evidence dies with the
 	// process, so a caller that wants to keep it must read it before letting the
 	// process end.
-	DurableEvents bool `json:"durable_events,omitempty"`
+	DurableEvents bool `json:"durable_events,omitzero"`
 	// Artifacts reports whether the runtime can enumerate the files a session
 	// produced. When false, ListArtifacts refuses rather than returning an empty
 	// list, which would read as "the session produced nothing".
-	Artifacts bool `json:"artifacts,omitempty"`
+	Artifacts bool `json:"artifacts,omitzero"`
 	// Cancellation reports whether a running session can be stopped. When false,
 	// Cancel refuses and a caller's only lever is to stop reading.
-	Cancellation bool `json:"cancellation,omitempty"`
+	Cancellation bool `json:"cancellation,omitzero"`
 	// Resumable reports whether a SessionRef survives the process that created it.
 	// When true, a reference persisted now can be handed back to a fresh process
 	// later and will still name a live session. When false the reference is
@@ -467,16 +467,16 @@ type Capabilities struct {
 	// This is separate from DurableEvents on purpose. That flag is about the
 	// evidence outliving the process; this one is about the handle doing so. A
 	// runtime can lose one and keep the other.
-	Resumable bool `json:"resumable,omitempty"`
+	Resumable bool `json:"resumable,omitzero"`
 	// MaxAttachmentBytes bounds one attachment's content. Zero means the runtime
 	// declares no bound.
-	MaxAttachmentBytes int64 `json:"max_attachment_bytes,omitempty"`
+	MaxAttachmentBytes int64 `json:"max_attachment_bytes,omitzero"`
 	// MaxLocatorBytes bounds the locator this runtime writes into a reference.
 	// Zero means DefaultMaxLocatorBytes.
-	MaxLocatorBytes int `json:"max_locator_bytes,omitempty"`
+	MaxLocatorBytes int `json:"max_locator_bytes,omitzero"`
 	// FindingsRounds reports that the runtime keeps the findings file of every
 	// grading round and checks it before the grader reads it, which an
 	// EvaluationSpec asks for by naming Findings. A runtime that grades on a
 	// vendor's side cannot reach inside that loop and declares false.
-	FindingsRounds bool `json:"findings_rounds,omitempty"`
+	FindingsRounds bool `json:"findings_rounds,omitzero"`
 }

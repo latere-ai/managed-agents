@@ -12,7 +12,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
@@ -381,7 +381,7 @@ type locator struct {
 	Agent        string    `json:"agent"`
 	Model        string    `json:"model"`
 	Graded       bool      `json:"graded"`
-	MaxRevisions int       `json:"max_revisions,omitempty"`
+	MaxRevisions int       `json:"max_revisions,omitzero"`
 	TaskSeq      uint64    `json:"task_seq"`
 	Started      time.Time `json:"started"`
 }
@@ -521,7 +521,7 @@ func randomID() (string, error) {
 }
 
 func reference(id string, revision uint64, loc locator) (managed.SessionRef, error) {
-	raw, err := json.Marshal(loc)
+	raw, err := json.Marshal(loc, storedJSON)
 	if err != nil {
 		return managed.SessionRef{}, fmt.Errorf("encode the session locator: %w", err)
 	}
@@ -537,7 +537,7 @@ func decode(ref managed.SessionRef) (locator, error) {
 		return locator{}, fmt.Errorf("%w: locator version %d is not %d", managed.ErrContract, ref.LocatorVersion, LocatorVersion)
 	}
 	var loc locator
-	if err := json.Unmarshal(ref.Locator, &loc); err != nil {
+	if err := json.Unmarshal(ref.Locator, &loc, foreignJSON); err != nil {
 		return locator{}, fmt.Errorf("%w: decode the locator: %w", managed.ErrContract, err)
 	}
 	return loc, nil
@@ -656,7 +656,7 @@ func replay(events []wireEvent, loc locator) progress {
 			continue
 		}
 		var message wireUserMessage
-		if json.Unmarshal(event.Payload, &message) != nil {
+		if json.Unmarshal(event.Payload, &message, foreignJSON) != nil {
 			continue
 		}
 		body := text(message.Content)
@@ -750,7 +750,7 @@ func idleAfter(events []wireEvent, since uint64) (string, time.Time, bool) {
 			continue
 		}
 		var status wireStatus
-		if json.Unmarshal(event.Payload, &status) == nil && status.Status == "idle" {
+		if json.Unmarshal(event.Payload, &status, foreignJSON) == nil && status.Status == "idle" {
 			return status.StopReason, event.Time, true
 		}
 	}
@@ -776,7 +776,7 @@ func graderVerdict(events []wireEvent, since uint64, task string) (managed.Verdi
 			continue
 		}
 		var started wireSubagentStarted
-		if err := json.Unmarshal(event.Payload, &started); err != nil {
+		if err := json.Unmarshal(event.Payload, &started, foreignJSON); err != nil {
 			return managed.Verdict{}, fmt.Errorf("read the grader's start: %w", err)
 		}
 		if err := graderStarted(started, task); err != nil {
@@ -798,7 +798,7 @@ func graderVerdict(events []wireEvent, since uint64, task string) (managed.Verdi
 		return managed.Verdict{}, errors.New("the grader wrote no message")
 	}
 	var message wireAgentMessage
-	if err := json.Unmarshal(last.Payload, &message); err != nil {
+	if err := json.Unmarshal(last.Payload, &message, foreignJSON); err != nil {
 		return managed.Verdict{}, fmt.Errorf("read the grader's message: %w", err)
 	}
 	return parseVerdict(text(message.Message.Blocks), model)

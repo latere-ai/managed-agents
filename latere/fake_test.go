@@ -5,7 +5,8 @@ package latere
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"maps"
 	"net/http"
@@ -30,9 +31,9 @@ type fakePlatform struct {
 
 	mu         sync.Mutex
 	preference string
-	agents     map[string][]json.RawMessage
+	agents     map[string][]jsontext.Value
 	sessions   map[string]*fakeSession
-	idem       map[string]json.RawMessage
+	idem       map[string]jsontext.Value
 	next       int
 	// files is what the worker writes into its working directory on every
 	// turn, by path.
@@ -67,8 +68,8 @@ const fakeSubject = "https://auth.example|person-1"
 func newFakePlatform(t *testing.T) *fakePlatform {
 	t.Helper()
 	f := &fakePlatform{
-		t: t, preference: "none", agents: map[string][]json.RawMessage{}, sessions: map[string]*fakeSession{},
-		idem: map[string]json.RawMessage{}, files: map[string]string{"outputs/result.txt": "5\n"},
+		t: t, preference: "none", agents: map[string][]jsontext.Value{}, sessions: map[string]*fakeSession{},
+		idem: map[string]jsontext.Value{}, files: map[string]string{"outputs/result.txt": "5\n"},
 		verdicts: []string{passed}, stop: "end_turn", fail: map[string]int{}, requests: map[string]int{},
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.serve))
@@ -168,8 +169,8 @@ func (f *fakePlatform) route(w http.ResponseWriter, r *http.Request) {
 		f.catalog(w, r)
 	case r.Method == http.MethodPut && strings.HasPrefix(path, "/v1/agents/agents/"):
 		name := strings.TrimPrefix(path, "/v1/agents/agents/")
-		var manifest json.RawMessage
-		if err := json.NewDecoder(r.Body).Decode(&manifest); err != nil {
+		var manifest jsontext.Value
+		if err := json.UnmarshalRead(r.Body, &manifest); err != nil {
 			writeFake(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_manifest"}})
 			return
 		}
@@ -212,7 +213,7 @@ func (f *fakePlatform) catalog(w http.ResponseWriter, r *http.Request) {
 
 func (f *fakePlatform) create(w http.ResponseWriter, r *http.Request) {
 	var body createSession
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.UnmarshalRead(r.Body, &body); err != nil {
 		writeFake(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request"}})
 		return
 	}
@@ -253,7 +254,7 @@ func (f *fakePlatform) session(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Metadata map[string]string `json:"metadata"`
 		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
+		_ = json.UnmarshalRead(r.Body, &body)
 		if body.Metadata != nil {
 			s.session.Metadata = body.Metadata
 		}
@@ -323,7 +324,7 @@ func (f *fakePlatform) send(w http.ResponseWriter, r *http.Request, s *fakeSessi
 		Type    string          `json:"type"`
 		Payload wireUserMessage `json:"payload"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.UnmarshalRead(r.Body, &body); err != nil {
 		writeFake(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request"}})
 		return
 	}
@@ -363,7 +364,7 @@ func (f *fakePlatform) work(s *fakeSession) {
 	f.append(s, "agent.message", "", wireAgentMessage{Message: struct {
 		Blocks []wireBlock `json:"blocks"`
 	}{Blocks: []wireBlock{{Type: "thinking", Thinking: "plan"}}}})
-	f.append(s, "agent.tool_use", "", wireToolUse{ToolUseID: "t1", Name: "write", Input: json.RawMessage(`{"path":"outputs/result.txt"}`)})
+	f.append(s, "agent.tool_use", "", wireToolUse{ToolUseID: "t1", Name: "write", Input: jsontext.Value(`{"path":"outputs/result.txt"}`)})
 	f.append(s, "tool.result", "", wireToolResult{ToolUseID: "t1", Content: []wireBlock{{Type: "text", Text: "Created."}}})
 	maps.Copy(s.files, f.files)
 	s.files["attachments/evt_1/paper.pdf"] = "%PDF"
@@ -452,5 +453,5 @@ func (f *fakePlatform) storage(w http.ResponseWriter, r *http.Request) {
 func writeFake(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
+	_ = json.MarshalWrite(w, body)
 }

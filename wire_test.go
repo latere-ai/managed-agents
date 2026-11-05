@@ -5,7 +5,7 @@ package managed
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -41,11 +41,9 @@ func TestGoldenValuesRoundTrip(t *testing.T) {
 				t.Fatalf("read golden: %v", err)
 			}
 			value := newValue()
-			decoder := json.NewDecoder(bytes.NewReader(body))
 			// An unknown field means the golden value carries something the Go
 			// type does not, which is exactly the drift this test is for.
-			decoder.DisallowUnknownFields()
-			if err := decoder.Decode(value); err != nil {
+			if err := json.UnmarshalRead(bytes.NewReader(body), value, json.RejectUnknownMembers(true)); err != nil {
 				t.Fatalf("decode: %v", err)
 			}
 			encoded, err := json.Marshal(value)

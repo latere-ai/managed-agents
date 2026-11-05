@@ -6,7 +6,7 @@ package latere
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 )
 
@@ -53,8 +53,8 @@ type approvals struct {
 }
 
 type subagentLimits struct {
-	MaxDepth      *int `json:"maxDepth,omitempty"`
-	MaxConcurrent *int `json:"maxConcurrent,omitempty"`
+	MaxDepth      *int `json:"maxDepth,omitzero"`
+	MaxConcurrent *int `json:"maxConcurrent,omitzero"`
 }
 
 type machine struct {
@@ -137,10 +137,14 @@ func workerManifest(product Product, instructions, image, model, graderModel, ru
 // again reuses one agent, a changed method or model gets its own, and a
 // session pinned to an agent's version never sees it change under it.
 func agentName(product Product, spec agentSpec) (string, error) {
-	encoded, err := json.Marshal(spec)
+	encoded, err := encodeSpec(spec)
 	if err != nil {
 		return "", fmt.Errorf("encode the agent's spec: %w", err)
 	}
 	sum := sha256.Sum256(encoded)
 	return product.Key + "-" + hex.EncodeToString(sum[:])[:16], nil
 }
+
+// encodeSpec is the bytes an agent's name is the digest of. They are fixed so
+// that applying a spec again finds the agent it made before.
+func encodeSpec(spec agentSpec) ([]byte, error) { return json.Marshal(spec, storedJSON) }

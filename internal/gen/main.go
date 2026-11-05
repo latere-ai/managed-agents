@@ -22,8 +22,8 @@
 //   - x-go-name overrides the derived Go identifier: id becomes ID, sha256
 //     becomes SHA256, url becomes URL.
 //   - x-go-type names a Go type verbatim, for the two places a structural type
-//     would be wrong (json.RawMessage, time.Time) and for the two enums whose
-//     Go form is hand-written (State, Grade).
+//     would be wrong (json.RawMessage, written as jsontext.Value, and time.Time)
+//     and for the two enums whose Go form is hand-written (State, Grade).
 //   - x-go-key-type types a map's key, so a meter map is map[Meter]int64
 //     rather than map[string]int64.
 //   - x-go-open, with x-go-consts, declares a string type whose named values
@@ -35,12 +35,13 @@
 // Whether a field is a pointer is derived, not declared. A property that is not
 // in the object's required list and whose type is an object becomes a pointer,
 // because that is the only way to tell "absent" from "present and zero" for a
-// struct. Everything else absent takes omitempty and its zero value.
+// struct. Everything else absent takes omitempty, or omitzero where its type has
+// no empty form (see omitOption), and its zero value.
 package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -190,7 +191,7 @@ func (g *generator) emitStruct(name string, def *jsonschema.Schema) error {
 		}
 		tag := jsonName
 		if !required[jsonName] {
-			tag += ",omitempty"
+			tag += omitOption(goType)
 		}
 		fmt.Fprintf(&g.body, "\t%s %s `json:%q`\n", goName(jsonName, property), goType, tag)
 	}
@@ -254,7 +255,8 @@ func (g *generator) goType(schema *jsonschema.Schema, required bool) (string, er
 	if named, ok := schema.Extra["x-go-type"].(string); ok {
 		switch named {
 		case "json.RawMessage":
-			g.imports["encoding/json"] = true
+			g.imports["encoding/json/jsontext"] = true
+			return "jsontext.Value", nil
 		case "time.Time":
 			g.imports["time"] = true
 		}
@@ -317,6 +319,26 @@ func (g *generator) goType(schema *jsonschema.Schema, required bool) (string, er
 		return fmt.Sprintf("map[%s]%s", key, value), nil
 	default:
 		return "", fmt.Errorf("unsupported type %q", schema.Type)
+	}
+}
+
+// omitOption is the tag option that leaves an absent optional field out of the
+// encoding, chosen by the field's Go type. A pointer, a number, a bool, a raw
+// value and the two hand-written enums are absent when they hold their zero
+// value: omitempty would also drop a raw `{}`, `[]` or `null`, and a number or
+// bool that is present and zero would vanish from a type with no pointer. A
+// time is a struct and is always written. Strings, slices and maps are absent
+// when empty.
+func omitOption(goType string) string {
+	switch {
+	case goType == "time.Time":
+		return ""
+	case strings.HasPrefix(goType, "*"),
+		goType == "bool", goType == "int", goType == "int64", goType == "uint64",
+		goType == "jsontext.Value", goType == "State", goType == "Grade":
+		return ",omitzero"
+	default:
+		return ",omitempty"
 	}
 }
 

@@ -5,7 +5,7 @@ package latere
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -23,7 +23,7 @@ type wireSession struct {
 	Status     string        `json:"status"`
 	StopReason string        `json:"stop_reason"`
 	LastSeq    uint64        `json:"last_seq"`
-	Model      *wireModelRef `json:"model,omitempty"`
+	Model      *wireModelRef `json:"model,omitzero"`
 	Budget     struct {
 		Spent int64 `json:"spent_cost_usd_micro"`
 	} `json:"budget"`
@@ -47,13 +47,13 @@ type wireNetwork struct {
 }
 
 type wireEvent struct {
-	ID       string          `json:"id"`
-	Seq      uint64          `json:"seq"`
-	Type     string          `json:"type"`
-	Time     time.Time       `json:"time"`
-	Turn     int             `json:"turn,omitempty"`
-	Subagent string          `json:"subagent,omitempty"`
-	Payload  json.RawMessage `json:"payload"`
+	ID       string         `json:"id"`
+	Seq      uint64         `json:"seq"`
+	Type     string         `json:"type"`
+	Time     time.Time      `json:"time"`
+	Turn     int            `json:"turn,omitzero"`
+	Subagent string         `json:"subagent,omitempty"`
+	Payload  jsontext.Value `json:"payload"`
 }
 
 type wireBlock struct {
@@ -74,22 +74,22 @@ type wireUserMessage struct {
 }
 
 type wireToolUse struct {
-	ToolUseID string          `json:"tool_use_id"`
-	Name      string          `json:"name"`
-	Input     json.RawMessage `json:"input"`
+	ToolUseID string         `json:"tool_use_id"`
+	Name      string         `json:"name"`
+	Input     jsontext.Value `json:"input"`
 }
 
 type wireToolResult struct {
 	ToolUseID string      `json:"tool_use_id"`
 	Content   []wireBlock `json:"content"`
-	IsError   bool        `json:"is_error,omitempty"`
-	Cost      *int64      `json:"cost_usd_micro,omitempty"`
+	IsError   bool        `json:"is_error,omitzero"`
+	Cost      *int64      `json:"cost_usd_micro,omitzero"`
 }
 
 type wireModelRequest struct {
 	Model   string     `json:"model"`
-	Usage   *wireUsage `json:"usage,omitempty"`
-	Cost    *int64     `json:"cost_usd_micro,omitempty"`
+	Usage   *wireUsage `json:"usage,omitzero"`
+	Cost    *int64     `json:"cost_usd_micro,omitzero"`
 	Outcome string     `json:"outcome"`
 }
 
@@ -98,9 +98,9 @@ type wireModelRequest struct {
 type wireUsage struct {
 	InputTokens     int64  `json:"input_tokens"`
 	OutputTokens    int64  `json:"output_tokens"`
-	CacheRead       *int64 `json:"cache_read_input_tokens,omitempty"`
-	CacheWrite      *int64 `json:"cache_write_input_tokens,omitempty"`
-	ReasoningTokens int64  `json:"reasoning_tokens,omitempty"`
+	CacheRead       *int64 `json:"cache_read_input_tokens,omitzero"`
+	CacheWrite      *int64 `json:"cache_write_input_tokens,omitzero"`
+	ReasoningTokens int64  `json:"reasoning_tokens,omitzero"`
 }
 
 type wireSubagentStarted struct {
@@ -139,7 +139,7 @@ type wireEffort struct {
 				Per    int64  `json:"per"`
 				Input  string `json:"input"`
 				Output string `json:"output"`
-			} `json:"price,omitempty"`
+			} `json:"price,omitzero"`
 		} `json:"next"`
 		Models []struct {
 			Name      string `json:"name"`
@@ -154,7 +154,7 @@ type wireCatalogModel struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
 	Spec struct {
-		Disabled bool `json:"disabled,omitempty"`
+		Disabled bool `json:"disabled,omitzero"`
 	} `json:"spec"`
 	Status struct {
 		Available bool `json:"available"`

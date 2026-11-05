@@ -5,7 +5,8 @@ package latere
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ func TestModelNamesReadAsProviderQualifiedRefs(t *testing.T) {
 
 func TestUsageIsNormalizedOncePerCall(t *testing.T) {
 	cached, written, cost, search := int64(30), int64(5), int64(4100), int64(10000)
-	payload := func(v any) json.RawMessage { raw, _ := json.Marshal(v); return raw }
+	payload := func(v any) jsontext.Value { raw, _ := json.Marshal(v); return raw }
 	events := normalize([]wireEvent{
 		{ID: "e1", Seq: 1, Type: "model.request", Payload: payload(wireModelRequest{Model: "openai/gpt-6.1-sol", Cost: &cost,
 			Usage: &wireUsage{InputTokens: 100, OutputTokens: 40, CacheRead: &cached, CacheWrite: &written, ReasoningTokens: 12}})},
@@ -62,7 +63,7 @@ func TestUsageIsNormalizedOncePerCall(t *testing.T) {
 }
 
 func TestTheTranscriptNamesSpeakersAndTheGrader(t *testing.T) {
-	payload := func(v any) json.RawMessage { raw, _ := json.Marshal(v); return raw }
+	payload := func(v any) jsontext.Value { raw, _ := json.Marshal(v); return raw }
 	message := func(blocks ...wireBlock) wireAgentMessage {
 		var m wireAgentMessage
 		m.Message.Blocks = blocks
@@ -72,7 +73,7 @@ func TestTheTranscriptNamesSpeakersAndTheGrader(t *testing.T) {
 		{ID: "e1", Type: "user.message", Payload: payload(wireUserMessage{Content: []wireBlock{{Type: "text", Text: "Do it."}}})},
 		{ID: "e2", Type: "agent.message", Payload: payload(message(wireBlock{Type: "thinking", Thinking: "first, read"}))},
 		{ID: "e3", Type: "agent.message", Payload: payload(message(wireBlock{Type: "text", Text: "Done."}, wireBlock{Type: "text", Text: " "}))},
-		{ID: "e4", Type: "agent.tool_use", Payload: payload(wireToolUse{Name: "bash", Input: json.RawMessage(`{"command":"ls"}`)})},
+		{ID: "e4", Type: "agent.tool_use", Payload: payload(wireToolUse{Name: "bash", Input: jsontext.Value(`{"command":"ls"}`)})},
 		{ID: "e5", Type: "session.error", Payload: payload(wireSessionError{Code: "model_busy", Message: "busy"})},
 		{ID: "e6", Type: "agent.message", Subagent: "t1", Payload: payload(message(wireBlock{Type: "text", Text: "Verdict."}))},
 		{ID: "e7", Type: "work.saved", Payload: payload(map[string]int{"covers": 3})},
@@ -503,12 +504,12 @@ func TestAContextSourceWinsAndNoneIsAnError(t *testing.T) {
 }
 
 func TestALocatorFromAnotherSchemaIsRefused(t *testing.T) {
-	ref := managed.SessionRef{Runtime: Name, ID: "ses_1", Revision: 1, LocatorVersion: 2, Locator: json.RawMessage(`{}`)}
+	ref := managed.SessionRef{Runtime: Name, ID: "ses_1", Revision: 1, LocatorVersion: 2, Locator: jsontext.Value(`{}`)}
 	if _, err := decode(ref); !errors.Is(err, managed.ErrContract) {
 		t.Fatalf("decode = %v", err)
 	}
 	ref.LocatorVersion = LocatorVersion
-	ref.Locator = json.RawMessage(`[]`)
+	ref.Locator = jsontext.Value(`[]`)
 	if _, err := decode(ref); !errors.Is(err, managed.ErrContract) {
 		t.Fatalf("decode = %v", err)
 	}

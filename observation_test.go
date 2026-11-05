@@ -4,7 +4,7 @@
 package managed
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"testing"
 )
@@ -17,7 +17,7 @@ func testRef() SessionRef {
 		ID:             "session-1",
 		Revision:       1,
 		LocatorVersion: 1,
-		Locator:        json.RawMessage(`{"shard":"a"}`),
+		Locator:        jsontext.Value(`{"shard":"a"}`),
 	}
 }
 
@@ -56,10 +56,10 @@ func TestValidateObservationRejectsContractViolations(t *testing.T) {
 
 	advanced := ref
 	advanced.Revision = 2
-	advanced.Locator = json.RawMessage(`{"shard":"b"}`)
+	advanced.Locator = jsontext.Value(`{"shard":"b"}`)
 
 	sameRevisionNewLocator := ref
-	sameRevisionNewLocator.Locator = json.RawMessage(`{"shard":"b"}`)
+	sameRevisionNewLocator.Locator = jsontext.Value(`{"shard":"b"}`)
 
 	sameRevisionNewLocatorVersion := ref
 	sameRevisionNewLocatorVersion.LocatorVersion = 2
@@ -155,7 +155,7 @@ func TestValidateObservationAllowsACheckpoint(t *testing.T) {
 	ref := testRef()
 	advanced := ref
 	advanced.Revision = 2
-	advanced.Locator = json.RawMessage(`{"shard":"b"}`)
+	advanced.Locator = jsontext.Value(`{"shard":"b"}`)
 	if err := ValidateObservation(ref, testRuntime, running(ref), running(advanced), GradingUnknown); err != nil {
 		t.Fatalf("checkpoint rejected: %v", err)
 	}

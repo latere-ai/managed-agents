@@ -4,7 +4,7 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -258,5 +258,51 @@ func TestRunReportsEveryFailure(t *testing.T) {
 				t.Fatal("run accepted a call it should refuse")
 			}
 		})
+	}
+}
+
+// TestOptionalFieldsGetTheTagTheirTypeNeeds pins the tag option written for an
+// absent optional field of each kind of Go type.
+func TestOptionalFieldsGetTheTagTheirTypeNeeds(t *testing.T) {
+	cases := map[string]string{
+		"*Usage":          ",omitzero",
+		"bool":            ",omitzero",
+		"int":             ",omitzero",
+		"int64":           ",omitzero",
+		"uint64":          ",omitzero",
+		"jsontext.Value":  ",omitzero",
+		"State":           ",omitzero",
+		"Grade":           ",omitzero",
+		"time.Time":       "",
+		"string":          ",omitempty",
+		"Role":            ",omitempty",
+		"[]string":        ",omitempty",
+		"[]byte":          ",omitempty",
+		"map[Meter]int64": ",omitempty",
+	}
+	for goType, want := range cases {
+		if got := omitOption(goType); got != want {
+			t.Errorf("omitOption(%q) = %q, want %q", goType, got, want)
+		}
+	}
+}
+
+// TestARawValueIsEmittedAsJSONText checks the generated type of a raw value
+// and its import.
+func TestARawValueIsEmittedAsJSONText(t *testing.T) {
+	body := `{"x-go-package":"p","x-type-order":["A"],"$defs":{"A":{"type":"object",
+	  "x-field-order":["raw"],"properties":{"raw":{"x-go-type":"json.RawMessage"}}}}}`
+	var root jsonschema.Schema
+	if err := json.Unmarshal([]byte(body), &root); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	out, err := generate(&root, "test.json")
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	for _, want := range []string{`"encoding/json/jsontext"`, "Raw jsontext.Value `json:\"raw,omitzero\"`"} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("generated source is missing %q:\n%s", want, out)
+		}
 	}
 }
