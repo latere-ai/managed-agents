@@ -205,3 +205,58 @@ func TestGeneratorEmitsAnOpenEnum(t *testing.T) {
 		}
 	}
 }
+
+// TestRunWritesTheGeneratedFile drives the command the way go generate does:
+// a schema in, a Go file out, identical to the committed one.
+func TestRunWritesTheGeneratedFile(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "types.gen.go")
+	if err := run([]string{"-schema", schemaPath, "-out", out}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	written, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committed, err := os.ReadFile(generated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(written) != string(committed) {
+		t.Fatal("the command wrote something other than the committed file")
+	}
+}
+
+// TestRunReportsEveryFailure covers the ways the command can refuse: a bad
+// flag, a missing flag, an unreadable or malformed schema, a schema the
+// generator rejects and an output path it cannot write.
+func TestRunReportsEveryFailure(t *testing.T) {
+	dir := t.TempDir()
+	malformed := filepath.Join(dir, "malformed.json")
+	if err := os.WriteFile(malformed, []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rejected := filepath.Join(dir, "rejected.json")
+	if err := os.WriteFile(rejected, []byte(`{"$defs":{}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(dir, "out.go")
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"unknown flag", []string{"-nope"}},
+		{"no schema", []string{"-out", out}},
+		{"no output", []string{"-schema", schemaPath}},
+		{"missing schema", []string{"-schema", filepath.Join(dir, "absent.json"), "-out", out}},
+		{"malformed schema", []string{"-schema", malformed, "-out", out}},
+		{"rejected schema", []string{"-schema", rejected, "-out", out}},
+		{"unwritable output", []string{"-schema", schemaPath, "-out", filepath.Join(dir, "no", "such", "dir", "out.go")}},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := run(testCase.args); err == nil {
+				t.Fatal("run accepted a call it should refuse")
+			}
+		})
+	}
+}

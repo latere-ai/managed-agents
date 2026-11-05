@@ -41,10 +41,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"go/format"
-	"log"
+	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -53,28 +54,37 @@ import (
 )
 
 func main() {
-	log.SetFlags(0)
-	schemaPath := flag.String("schema", "", "path to the JSON Schema document")
-	outPath := flag.String("out", "", "path to the Go file to write")
-	flag.Parse()
+	if err := run(os.Args[1:]); err != nil {
+		slog.Error("gen failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+// run reads the schema and the output path from args and writes the generated
+// file. It returns instead of exiting so a test can drive every failure.
+func run(args []string) error {
+	flags := flag.NewFlagSet("gen", flag.ContinueOnError)
+	schemaPath := flags.String("schema", "", "path to the JSON Schema document")
+	outPath := flags.String("out", "", "path to the Go file to write")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
 	if *schemaPath == "" || *outPath == "" {
-		log.Fatal("gen: -schema and -out are both required")
+		return errors.New("-schema and -out are both required")
 	}
 	source, err := os.ReadFile(*schemaPath)
 	if err != nil {
-		log.Fatalf("gen: %v", err)
+		return err
 	}
 	var root jsonschema.Schema
 	if err := json.Unmarshal(source, &root); err != nil {
-		log.Fatalf("gen: parse %s: %v", *schemaPath, err)
+		return fmt.Errorf("parse %s: %w", *schemaPath, err)
 	}
 	rendered, err := generate(&root, *schemaPath)
 	if err != nil {
-		log.Fatalf("gen: %v", err)
+		return err
 	}
-	if err := os.WriteFile(*outPath, rendered, 0o644); err != nil {
-		log.Fatalf("gen: %v", err)
-	}
+	return os.WriteFile(*outPath, rendered, 0o644)
 }
 
 // generator accumulates the output and the imports the output turned out to
@@ -383,8 +393,8 @@ func stringList(extra map[string]any, key string) ([]string, error) {
 }
 
 func trimDir(path string) string {
-	if index := strings.LastIndex(path, "/"); index >= 0 {
-		return path[index+1:]
+	if _, after, found := strings.CutLast(path, "/"); found {
+		return after
 	}
 	return path
 }
