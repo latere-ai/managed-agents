@@ -80,6 +80,20 @@ Keep the argument in `specs/` and out of the README. Keep the usage in the READM
 
 One logical change per commit, staged explicitly — never `git add -A`. The message says *why* the change was made; the diff already says what it did.
 
+## Releasing
+
+A maintainer cuts a release from a clean checkout of `main` with the gate
+pinned in `internal/gate`, which is not the root module:
+
+```
+go -C internal/gate tool lateregate -C ../.. release vX.Y.Z
+```
+
+The command runs from the repository root, as `make` does, so it reads
+`CHANGELOG.md` and git there. It moves the notes under `## Unreleased` into
+a section for the version, commits, tags and pushes, and it refuses while CI
+on `main` is red.
+
 ## Writing
 
 Every sentence the port emits or carries is written for one reader, and the
