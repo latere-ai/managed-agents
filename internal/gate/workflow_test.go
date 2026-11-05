@@ -15,8 +15,9 @@ import (
 // organization's own runner group refuses a public repository, and a fork's
 // pull request must never run on that shared machine. The shared workflow
 // routes a public repository to a hosted runner by default, so the caller
-// passes no runner. Every action and reusable workflow is pinned by commit, so
-// a moved tag cannot change what CI runs.
+// passes no runner. Every third-party action and reusable workflow is pinned
+// by commit, so a moved tag cannot change what CI runs; the shared pipeline in
+// latere-ai/ci is called at its major tag, as in every repository.
 func TestVerificationRunsOnHostedRunners(t *testing.T) {
 	// Relative to this package's directory, where go test runs it. A path from
 	// runtime.Caller is module-relative when the test is built with -trimpath.
@@ -43,8 +44,8 @@ func TestVerificationRunsOnHostedRunners(t *testing.T) {
 			}
 			for id, job := range workflow.Jobs {
 				if job.Uses != "" {
-					if !pinned(job.Uses) {
-						t.Errorf("%s uses %q, not pinned by commit", id, job.Uses)
+					if !pinned(job.Uses) && !shared(job.Uses) {
+						t.Errorf("%s uses %q, neither pinned by commit nor latere-ai/ci's shared pipeline at v1", id, job.Uses)
 					}
 					continue
 				}
@@ -72,6 +73,22 @@ func TestHostedNamesGitHubImages(t *testing.T) {
 	} {
 		if got := hosted(label); got != want {
 			t.Errorf("hosted(%q) = %v, want %v", label, got, want)
+		}
+	}
+}
+
+func TestSharedIsTheOrganizationsPipelineAtV1(t *testing.T) {
+	for uses, want := range map[string]bool{
+		"latere-ai/ci/.github/workflows/lateregate.yml@v1":      true,
+		"latere-ai/ci/.github/workflows/notes-release.yml@v1":   true,
+		"latere-ai/ci/.github/workflows/lateregate.yml@v1.34.0": false,
+		"latere-ai/ci/.github/workflows/lateregate.yml@main":    false,
+		"latere-ai/ci/.github/workflows/lateregate.yml":         false,
+		"latere-ai/ci/actions/verified-commit@v1":               false,
+		"other/ci/.github/workflows/lateregate.yml@v1":          false,
+	} {
+		if got := shared(uses); got != want {
+			t.Errorf("shared(%q) = %v, want %v", uses, got, want)
 		}
 	}
 }

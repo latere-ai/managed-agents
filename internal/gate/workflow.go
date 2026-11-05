@@ -14,6 +14,15 @@ func hosted(label string) bool {
 	return strings.HasPrefix(label, "ubuntu-") || strings.HasPrefix(label, "macos-") || strings.HasPrefix(label, "windows-")
 }
 
+// shared reports whether a uses reference is one of the organization's shared
+// pipelines in latere-ai/ci at its major tag. That tag is how a fix to the
+// shared pipeline reaches every repository, and the daily ci-gate bump
+// dispatches only a caller at it.
+func shared(uses string) bool {
+	path, ref, ok := strings.Cut(uses, "@")
+	return ok && ref == "v1" && strings.HasPrefix(path, "latere-ai/ci/.github/workflows/")
+}
+
 // pinned reports whether a uses reference names a full commit.
 func pinned(uses string) bool {
 	_, ref, ok := strings.Cut(uses, "@")
