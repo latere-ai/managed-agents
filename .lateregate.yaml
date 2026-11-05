@@ -7,6 +7,17 @@
 # graph. internal/gate/go.mod says why; the Makefile reaches the tool through
 # it and points it back at this directory.
 
+modules:
+  # Each of these is a module of its own, so the root's ./... never reaches it:
+  # the gate module that pins the tool, the schema generator, and the platform
+  # adapter. They stay separate modules so a consumer of the contract never
+  # sees their dependencies. Listing them has the suite vet, race and hold the
+  # cover floor in each, and lint run in each, on a laptop and on CI alike.
+  # The generator's tests also check that types.gen.go matches the schema.
+  - internal/gate
+  - internal/gen
+  - latere
+
 cover:
   # The default floor, ninety per package, is the figure CONTRIBUTING states.
   trim_prefix: latere.ai/x/managed-agents/
@@ -25,10 +36,14 @@ cover:
       drives them
 
 hermetic:
-  # Nothing besides the toolchain. The suite reaches no system binary: the one
-  # test that shells out runs `go list`, which the toolchain provides, and the
-  # empty list is what keeps that true.
-  allow: []
+  # The two system directories, for two binaries the suite really runs. The root
+  # module reaches only `go list`, which the toolchain provides. The gate module's
+  # config test runs lateregate, which asks git which Go files the repository
+  # tracks (/usr/bin). The platform adapter's token-command test runs the shell
+  # that Command hands the command to, which is the feature under test (/bin).
+  # Naming the directories keeps those two dependencies visible; with allow: []
+  # both tests fail rather than skip.
+  allow: [/usr/bin, /bin]
 
 spec:
   # Every spec is numbered, appears in the index with the status it claims, and

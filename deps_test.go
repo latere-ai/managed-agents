@@ -4,6 +4,9 @@
 package managed_test
 
 import (
+	"errors"
+	"io/fs"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -38,5 +41,18 @@ func TestModuleGraphContainsOnlyThePort(t *testing.T) {
 	}
 	if got := strings.TrimSpace(string(out)); got != "latere.ai/x/managed-agents" {
 		t.Fatalf("the port adds tool dependencies to its consumers:\n%s", got)
+	}
+}
+
+// A go.sum at the root would mean the module took a dependency, which is the
+// promise this port makes never to do: tools belong in internal/gate or
+// internal/gen, which are modules of their own for this reason.
+func TestRootHasNoGoSum(t *testing.T) {
+	_, err := os.Stat("go.sum")
+	if err == nil {
+		t.Fatal("go.sum exists: the root module took a dependency; tools belong in internal/gate or internal/gen")
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("stat go.sum: %v", err)
 	}
 }

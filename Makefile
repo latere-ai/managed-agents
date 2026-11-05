@@ -2,9 +2,10 @@
 #
 # Every gate runs on a workstation the way CI runs it: a gate that only runs on
 # a runner tells you too late. CI runs the shared gate, latere-ai/ci's
-# lateregate.yml, over the root module from internal/gate, and `make modules`
-# beside it for what that gate does not reach. A target named for a gate
-# delegates to lateregate, then covers the other modules.
+# lateregate.yml, which runs lateregate from internal/gate over the whole
+# repository; the `modules` key in .lateregate.yaml has it vet, race, cover and
+# lint each module beside the root too. A target named for a gate delegates to
+# lateregate, then covers the other modules.
 #
 # The gates themselves come from latere.ai/x/ci-gate, pinned in
 # internal/gate/go.mod rather than in the root go.mod. The port promises that
@@ -22,7 +23,7 @@ GOLANGCI_VERSION ?= v2.13.1
 # The adapters, each a module of its own so a consumer of the contract never
 # sees a vendor's dependencies. `go test ./...` here stops at a module
 # boundary, so every target that tests, races, covers or lints the contract
-# runs over these as well, and so does `make modules`, which CI runs.
+# runs over these as well, and so does `make modules`.
 ADAPTERS := latere
 
 .PHONY: all test test-race test-hermetic cover fmt fmt-check lint lint-config \
@@ -98,7 +99,8 @@ lint: lint-config
 	done
 
 # What a gate over the root module does not reach: the gate module, the
-# generator and each adapter are modules of their own. Each adapter is vetted, raced, held to the coverage
+# generator and each adapter are modules of their own. CI reaches them through
+# `modules` in .lateregate.yaml; this target is the same check by hand. Each adapter is vetted, raced, held to the coverage
 # floor and linted, as the root is.
 modules: validate lint-config
 	go -C internal/gate test ./...

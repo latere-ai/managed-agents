@@ -1,62 +1,26 @@
 name: ci
 
-# The shared per-push gate, lateregate.yml, runs every check latere.ai/x/ci-gate
-# defines over this repository. The tool is pinned in internal/gate rather than
-# at the root, so the port's root module depends on nothing a consumer would
-# see; gate_module runs it from there against the whole tree.
-#
-# The shared gate checks the root module. The modules job runs what it cannot
-# reach: the adapters, the generator and the gate module are modules of their
-# own, and `make validate` holds the three promises specific to this port (the
-# root module depends on nothing, types.gen.go matches the schema, the
-# generator builds and passes its tests).
-
-# A push or pull request that changes only specs or markdown starts no run,
-# because no build or test here reads them. `lateregate release` runs the whole
-# bar, the spec tree included, before every tag.
+# The bar lives in latere-ai/ci-gate, pinned in go.mod, and the shared
+# workflow runs it. What this repository decides is in .lateregate.yaml.
+# `lateregate init` writes this file, the same in every repository.
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "specs/**"
-      - "**.md"
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - "specs/**"
-      - "**.md"
+  workflow_dispatch:
 
 # A newer push to the same ref supersedes this run: its commit carries every
-# change this one would verify, and the runner slots are better spent on it.
+# change this one would verify.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+# actions: read lets the gate find the last commit whose CI passed, which it
+# measures the change from.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   gate:
-    # GitHub-hosted runners: the repository is public, and the organization's
-    # own runner neither takes a public repository nor should run a fork's
-    # pull request.
-    uses: latere-ai/ci/.github/workflows/lateregate.yml@52e1a31e5bdccaed196686717b5a600212eba8a2
-    with:
-      runs_on: ubuntu-latest
-      gate_module: internal/gate
-      # golangci-lint's released binaries are built with Go 1.27.0, and they
-      # cannot read the export data a newer 1.27 patch writes for the standard
-      # library, so lint fails on every file. CI runs the toolchain the linter
-      # was built with; a local `make lint` builds the linter with the local
-      # toolchain and needs no such pin.
-      go_version: "1.27.0"
-
-  modules:
-    name: modules beyond the root
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: "1.27.0"
-      - run: make modules
+    uses: latere-ai/ci/.github/workflows/lateregate.yml@a75a02092efa2533724d45e2e0161bb9392816b7 # v1.32.1
